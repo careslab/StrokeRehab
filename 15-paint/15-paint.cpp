@@ -121,6 +121,9 @@ cLabel* labelMessage;
 // a label to display the rate [Hz] at which the simulation is running
 cLabel* labelRates;
 
+// a label to display the accuracy of the drawing
+cLabel* labelAccuracy;
+
 // a flag that indicates if the haptic simulation is currently running
 bool simulationRunning = false;
 
@@ -149,6 +152,27 @@ int framebufferH = 0;
 
 // swap interval for the display context (vertical synchronization)
 int swapInterval = 1;
+
+// prespecified color values
+cColorb blue;
+cColorb red;
+cColorb yellow;
+cColorb green;
+cColorb brushblue;
+cColorb brushred;
+cColorb brushyellow;
+cColorb brushgreen;
+
+// Arrays to hold color values
+int trueRed[1000][1000];
+int trueGreen[1000][1000];
+int trueBlue[1000][1000];
+int drawnRed[1000][1000];
+int drawnGreen[1000][1000];
+int drawnBlue[1000][1000];
+
+//accuracy variable
+double accuracy;
 
 //1/23/25 modified JML
 //clientServerSoftware class test variable
@@ -193,9 +217,9 @@ void clearCanvas() {
                            cColorb newColor;
 
                             // compute new color
-                            GLubyte R = (GLubyte)cClamp((255.0), 130.0, 254.0);
-                            GLubyte G = (GLubyte)cClamp((255.0), 130.0, 254.0);
-                            GLubyte B = (GLubyte)cClamp((255.0), 130.0, 254.0);
+                            GLubyte R = (GLubyte)254.0;
+                            GLubyte G = (GLubyte)254.0;
+                            GLubyte B = (GLubyte)254.0;
                             newColor.set(R, G, B); 
 
                             // assign new color to pixel
@@ -250,10 +274,14 @@ void clearCanvas() {
                 canvas->m_texture->markForUpdate();
 } */
 
-void drawCanvasLine(double x1, double y1, double x2, double y2, double size) {
+void drawCanvasLine(double x1, double y1, double x2, double y2, double size, string incolor) {
     int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
     int canvasHeight = (int)canvas->m_texture->m_image->getHeight();
-    
+    cColorb newColor;
+    if (incolor == "blue"){newColor = blue;}
+    else if (incolor == "red"){newColor = red;}
+    else if (incolor == "yellow"){newColor = yellow;}
+    else if (incolor == "green"){newColor = green;}
     // Calculate line direction
     double dx = x2 - x1;
     double dy = y2 - y1;
@@ -266,11 +294,6 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size) {
             // Check if pixel is within the line bounds
             if (y >= std::min(y1, y2) && y <= std::max(y1, y2)) {
                 // Color the pixel
-                cColorb newColor;
-                GLubyte R = (GLubyte)cClamp((240.0), 130.0, 254.0);
-                GLubyte G = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                GLubyte B = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                newColor.set(R, G, B);
                 canvas->m_texture->m_image->setPixelColor(x, y, newColor);
             }
         }
@@ -284,11 +307,6 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size) {
             // Check if pixel is within the line bounds
             if (x >= std::min(x1, x2) && x <= std::max(x1, x2)) {
                 // Color the pixel
-                cColorb newColor;
-                GLubyte R = (GLubyte)cClamp((240.0), 130.0, 254.0);
-                GLubyte G = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                GLubyte B = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                newColor.set(R, G, B);
                 canvas->m_texture->m_image->setPixelColor(x, y, newColor);
             }
         }
@@ -311,13 +329,6 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size) {
 
                 // If the pixel is within the line thickness (main line drawing)
                 if (distance <= size) {
-                    cColorb newColor;
-
-                    // Compute new color (you can change these values as needed)
-                    GLubyte R = (GLubyte)cClamp((240.0), 130.0, 254.0);
-                    GLubyte G = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                    GLubyte B = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                    newColor.set(R, G, B);
 
                     // Assign new color to pixel
                     if ((x >= 0) && (y >= 0) && (x < canvasWidth) && (y < canvasHeight)) {
@@ -339,13 +350,6 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size) {
 
             // If the pixel is within the rounded caps region at the start or end
             if ((distToStart <= size || distToEnd <= size)) {
-                cColorb newColor;
-
-                // Compute new color (you can change these values as needed)
-                GLubyte R = (GLubyte)cClamp((240.0), 130.0, 254.0);
-                GLubyte G = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                GLubyte B = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                newColor.set(R, G, B);
 
                 // Assign new color to pixel
                 if ((x >= 0) && (y >= 0) && (x < canvasWidth) && (y < canvasHeight)) {
@@ -360,10 +364,16 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size) {
 }
 
 // This function will draw a circle of diameter r centered at x,y
-void drawCanvasCircle(double x1, double y1, double r, double width) {
+void drawCanvasCircle(double x1, double y1, double r, double width, string incolor) {
     // paint color at tool position
                 int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
                 int canvasHeight = (int)canvas->m_texture->m_image->getHeight();
+
+                cColorb newColor;
+                if (incolor == "blue"){newColor = blue;}
+                else if (incolor == "red"){newColor = red;}
+                else if (incolor == "yellow"){newColor = yellow;}
+                else if (incolor == "green"){newColor = green;}
 
                 double sizeOuter = r + width;
                 double sizeInner = r - width;
@@ -375,14 +385,6 @@ void drawCanvasCircle(double x1, double y1, double r, double width) {
                         double distance = sqrt((double)(pow(x-(x1),2)+pow(y-(y1),2)));
                         if (distance <= sizeOuter && distance >= sizeInner)
                         {
-                            cColorb newColor;
-
-                            // compute new color
-                            GLubyte R = (GLubyte)cClamp((240.0), 130.0, 254.0);
-                            GLubyte G = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                            GLubyte B = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                            newColor.set(R, G, B);
-
                             // assign new color to pixel
                             if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
                             {
@@ -396,6 +398,104 @@ void drawCanvasCircle(double x1, double y1, double r, double width) {
 
                 // update texture
                 canvas->m_texture->markForUpdate();
+}
+
+//function to store each pixel's color values into an array
+void StoreColors(){
+    int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
+    int canvasHeight = (int)canvas->m_texture->m_image->getHeight();
+
+    for (int x=0; x<canvasWidth; x++)
+                {
+                    for (int y=0; y<canvasHeight; y++)
+                    {
+                        cColorb newColor;
+                        if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
+                            {
+                                canvas->m_texture->m_image->getPixelColor(x, y, newColor);
+                            }
+                            if (newColor == blue) {newColor = brushblue;}
+                            else if (newColor == red) {newColor = brushred;}
+                            else if (newColor == green) {newColor = brushgreen;}
+                            else if (newColor == yellow) {newColor = brushyellow;}
+                            // store each rgb value
+                            GLubyte R = newColor.getR();
+                            GLubyte G = newColor.getG();
+                            GLubyte B = newColor.getB();
+                        if (newColor != brushblue & newColor != brushred & newColor != brushyellow & newColor != brushgreen) {
+                            if ((x<1000) && (y<1000)) {
+                            trueRed[x][y] = 5000;
+                            trueGreen[x][y] = 5000;
+                            trueBlue[x][y] = 5000;
+                        }
+                        }
+                        else{
+                        if ((x<1000) && (y<1000)) {
+                            trueRed[x][y] = static_cast<int>(R);
+                            trueGreen[x][y] = static_cast<int>(G);
+                            trueBlue[x][y] = static_cast<int>(B);
+                        }
+                        }
+                    }
+                }
+}
+
+//function to grade the accuracy of drawing
+void GradeAccuracy() {
+    int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
+    int canvasHeight = (int)canvas->m_texture->m_image->getHeight();
+    accuracy = 0.0;
+    int resultRed[1000][1000];
+    int resultGreen[1000][1000];
+    int resultBlue[1000][1000];
+    double totalColored = 0;
+
+    for (int x=0; x<canvasWidth; x++)
+                {
+                    for (int y=0; y<canvasHeight; y++)
+                    {
+                        cColorb newColor;
+                        if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
+                            {
+                                canvas->m_texture->m_image->getPixelColor(x, y, newColor);
+                            }
+
+                            // store each rgb value
+                            GLubyte R = newColor.getR();
+                            GLubyte G = newColor.getG();
+                            GLubyte B = newColor.getB();
+                        
+                        if ((x<1000) && (y<1000)) {
+                            if (newColor != brushblue & newColor != brushred & newColor != brushyellow & newColor != brushgreen) {
+                            drawnRed[x][y] = 5000;
+                            drawnGreen[x][y] = 5000;
+                            drawnBlue[x][y] = 5000;
+                            }
+                            else {
+                            drawnRed[x][y] = static_cast<int>(R);
+                            drawnGreen[x][y] = static_cast<int>(G);
+                            drawnBlue[x][y] = static_cast<int>(B);
+                            }
+                            
+                        //perform check to see if each pixel is the correct color
+                        resultRed[x][y] = drawnRed[x][y] - trueRed[x][y];
+                        resultGreen[x][y] = drawnGreen[x][y] - trueGreen[x][y];
+                        resultBlue[x][y] = drawnBlue[x][y] - trueBlue[x][y];
+                        if (trueRed[x][y] == 5000) {
+                            if(resultRed[x][y] != 0 & resultGreen[x][y] != 0 & resultBlue[x][y] != 0) {accuracy = accuracy - 0.5;}
+                        }
+                        
+                        else {
+                            if(resultRed[x][y] == 0 & resultGreen[x][y] == 0 & resultBlue[x][y] == 0) {accuracy = accuracy + 1;}
+                            totalColored = totalColored + 1;
+                            }
+                        }
+                    }
+                }
+accuracy = (accuracy/totalColored)*100;
+
+labelAccuracy->setText("Accuracy: " + cStr(accuracy, 0) + "%");
+
 }
 
 
@@ -642,7 +742,7 @@ int main(int argc, char* argv[])
     palette = new cMesh();
 
     // create a plane
-    cCreatePlane(palette, 0.5, 0.5);
+    cCreatePlane(palette, 0.2, 0.2); //0.5, 0.5 original
 
     // create collision detector
     palette->createBruteForceCollisionDetector();
@@ -651,7 +751,7 @@ int main(int argc, char* argv[])
     world->addChild(palette);
 
     // set the position of the object
-    palette->setLocalPos(-0.25, -0.3, 0.0);
+    palette->setLocalPos(-0.25, -0.45, 0.0); //-0.25, -0.3, 0.0 is original
     palette->rotateAboutGlobalAxisDeg(cVector3d(0,1,0), 90);
     palette->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(90));
 
@@ -660,7 +760,7 @@ int main(int argc, char* argv[])
     palette->setTexture(texture);
 
     // load texture image
-    fileload = palette->m_texture->loadFromFile(currentpath + "../resources/images/palette.png");
+    fileload = palette->m_texture->loadFromFile(currentpath + "../resources/images/palette2.jpg"); //palette.png original
     if (!fileload)
     {
         cout << "Error - Texture image 'palette.jpg' failed to load correctly." << endl;
@@ -694,6 +794,7 @@ int main(int argc, char* argv[])
     // initialize a default color for tool brush
     paintColor.setBlueRoyal();
     tool->m_hapticPoint->m_sphereProxy->m_material->setColor(paintColor);
+    tool->m_hapticPoint->m_sphereProxy->m_material->setColor(brushblue);
 
 
     /////////////////////////////////////////////////////////////////////////
@@ -704,7 +805,7 @@ int main(int argc, char* argv[])
     canvas = new cMesh();
 
     // create a plane
-    cCreatePlane(canvas, 0.5, 0.5);
+    cCreatePlane(canvas, 0.8, 0.8); //0.5, 0.5 original
 
     // create collision detector
     canvas->createBruteForceCollisionDetector();
@@ -713,7 +814,7 @@ int main(int argc, char* argv[])
     world->addChild(canvas);
 
     // set the position of the object
-    canvas->setLocalPos(-0.25, 0.3, 0.0);
+    canvas->setLocalPos(-0.25, 0.15, 0.0); //-0.25, 0.3, 0.0 original
     canvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(90));
     canvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(90));
 
@@ -750,6 +851,17 @@ int main(int argc, char* argv[])
     canvas->m_material->setHapticTriangleSides(true, false);
     canvas->m_material->setTextureLevel(0.5);
 
+    //set colors
+    blue.set((GLubyte)130, (GLubyte)130, (GLubyte)254);
+    red.set((GLubyte)254, (GLubyte)130, (GLubyte)130);
+    yellow.set((GLubyte)254, (GLubyte)254, (GLubyte)156);
+    green.set((GLubyte)130, (GLubyte)254, (GLubyte)149);
+    brushblue.set((GLubyte)30, (GLubyte)30, (GLubyte)254);
+    brushred.set((GLubyte)254, (GLubyte)30, (GLubyte)30);
+    brushyellow.set((GLubyte)234, (GLubyte)254, (GLubyte)56);
+    brushgreen.set((GLubyte)30, (GLubyte)154, (GLubyte)49);
+    clearCanvas();
+
 
     //--------------------------------------------------------------------------
     // WIDGETS
@@ -774,6 +886,13 @@ int main(int argc, char* argv[])
 
     // set text message
     labelMessage->setText("select a color from the palette (left), and paint on the canvas (right)");
+
+    // create a label for the accuracy of the drawing
+    labelAccuracy = new cLabel(font);
+    camera->m_frontLayer->addChild(labelAccuracy);
+
+    // set font color
+    labelAccuracy->m_fontColor.setGrayLevel(0.4);
 
 
     // create a background
@@ -1011,6 +1130,9 @@ void renderGraphics(void)
     // update position of label
     labelMessage->setLocalPos((int)(0.5 * (displayW - labelMessage->getWidth())), 40);
 
+    // update position of label Accuracy
+    labelAccuracy->setLocalPos((int)(0.5 * (displayW - labelAccuracy->getWidth())), (int)(displayH - 40));
+
 
     /////////////////////////////////////////////////////////////////////
     // RENDER SCENE
@@ -1072,6 +1194,14 @@ void renderHaptics(void)
         // restart the simulation clock
         clock.reset();
         clock.start();
+
+
+        //set tool radius as factor of x coordinate
+        cVector3d hapticPosition;
+        hapticDevice->getPosition(hapticPosition);
+        if(hapticPosition.x() > -0.023) {
+            tool->setRadius(0.01*((hapticPosition.x()*45+2.1)));
+        }
 
 
         /////////////////////////////////////////////////////////////////////
@@ -1291,12 +1421,12 @@ void renderHaptics(void)
                 canvas->m_texture->markForUpdate();
         } */
 
-       bool button0;
-        hapticDevice->getUserSwitch(0, button0);
+       //bool button0;
+        //hapticDevice->getUserSwitch(0, button0);
 
-        if (button0) {
+        if (false) {
         clearCanvas();
-        drawCanvasCircle(500, 500, 250, 25);
+        drawCanvasCircle(500, 500, 250, 25, "blue");
         }
 
 
@@ -1318,10 +1448,11 @@ void renderHaptics(void)
         if (button1)
         {
             clearCanvas();
-            drawCanvasLine(500, 500, 900, 900, 25);
-            drawCanvasLine(500, 500, 500, 700, 25);
-            drawCanvasLine(500, 500, 700, 500, 25);
-            drawCanvasCircle(250, 250, 175, 25);
+            drawCanvasLine(500, 500, 900, 900, 25, "red");
+            drawCanvasLine(500, 500, 500, 700, 25, "yellow");
+            drawCanvasLine(500, 500, 700, 500, 25, "green");
+            drawCanvasCircle(250, 250, 175, 25, "blue");
+            StoreColors();
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
@@ -1339,9 +1470,10 @@ void renderHaptics(void)
         if (button2)
         {
             clearCanvas();
-            drawCanvasLine(200, 200, 500, 800, 25);
-            drawCanvasLine(500, 800, 800, 200, 25);
-            drawCanvasLine(800, 200, 200, 200, 25);
+            drawCanvasLine(200, 200, 500, 800, 25, "red");
+            drawCanvasLine(500, 800, 800, 200, 25, "red");
+            drawCanvasLine(800, 200, 200, 200, 25, "green");
+            StoreColors();
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
@@ -1358,14 +1490,38 @@ void renderHaptics(void)
         if (button3)
         {
             clearCanvas();
-            drawCanvasLine(200, 200, 200, 800, 25);
-            drawCanvasLine(200, 800, 800, 800, 25);
-            drawCanvasLine(800, 800, 800, 200, 25);
-            drawCanvasLine(800, 200, 200, 200, 25);
+            drawCanvasLine(200, 200, 200, 800, 25, "red");
+            drawCanvasLine(200, 800, 800, 800, 25, "yellow");
+            drawCanvasLine(800, 800, 800, 200, 25, "green");
+            drawCanvasLine(800, 200, 200, 200, 25, "blue");
+            StoreColors();
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
         ///////////////////////////////////////////////////////
+
+        bool button0;
+        hapticDevice->getUserSwitch(0, button0);
+
+        if (button0){
+            GradeAccuracy();
+            cout << "accuracy: " << accuracy << "%" << endl;
+        }
+
+
+
+        /////////////////////////////////////////////////////////////////////
+        // Grade Accuracy ((TEST))
+        /////////////////////////////////////////////////////////////////////
+
+
+
+
+
+        ///////////////////////////////////////////////////////
+        // END OF TEST AREA
+        ///////////////////////////////////////////////////////
+
 
 
         // signal frequency counter

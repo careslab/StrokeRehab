@@ -43,8 +43,9 @@
 
 //------------------------------------------------------------------------------
 #include "chai3d.h"
-//1/16/25 addition JML
-//#include "falconClientServer/falconClientServer.h"
+#include <chrono>
+#include <fstream>
+#include <ctime>
 //------------------------------------------------------------------------------
 #include <GLFW/glfw3.h>
 //------------------------------------------------------------------------------
@@ -124,6 +125,12 @@ cLabel* labelRates;
 // a label to display the accuracy of the drawing
 cLabel* labelAccuracy;
 
+// a label to display the timer
+cLabel* labelTimer;
+
+// a label for the win time
+cLabel* labelDrawTime;
+
 // a flag that indicates if the haptic simulation is currently running
 bool simulationRunning = false;
 
@@ -187,6 +194,17 @@ bool drawing6 = false;
 
 // variable to hold button 0 state for edge driven activation
 bool b0PreviousState = false;
+
+// timer variables
+// Timer Started Variable
+int timerStarted = 0;
+chrono::high_resolution_clock::time_point timeStart = chrono::high_resolution_clock::now();
+
+// Elapsed Time Variable
+chrono::duration<double> elapsedTime = chrono::seconds(0);
+
+// Draw Time Variable
+chrono::duration<double> drawTime = chrono::seconds(0);
 
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
@@ -425,6 +443,9 @@ void GradeAccuracy() {
     int resultBlue[1000][1000];
     double totalColored = 0;
 
+    drawTime = elapsedTime;
+    timerStarted = 0;
+
     for (int x=0; x<canvasWidth; x++)
                 {
                     for (int y=0; y<canvasHeight; y++)
@@ -471,6 +492,13 @@ accuracy = (accuracy/totalColored)*100;
 
 labelAccuracy->setText("Accuracy: " + cStr(accuracy, 0) + "%");
 
+}
+
+void StartTimer() {
+    if (!timerStarted) {
+        timeStart = chrono::high_resolution_clock::now();
+        timerStarted = 1;
+    }
 }
 
 
@@ -869,6 +897,20 @@ int main(int argc, char* argv[])
     // set font color
     labelAccuracy->m_fontColor.setGrayLevel(0.4);
 
+    // create a label for timer
+    labelTimer = new cLabel(font);
+    camera->m_frontLayer->addChild(labelTimer);
+
+    // set font color
+    labelTimer->m_fontColor.setBlack();
+
+    // create a labelfor win time
+    labelDrawTime = new cLabel(font);
+    camera->m_frontLayer->addChild(labelDrawTime);
+
+    // set font color
+    labelDrawTime->m_fontColor.setBlack();
+
 
     // create a background
     background = new cBackground();
@@ -1130,6 +1172,12 @@ void renderGraphics(void)
     labelRates->setText(cStr(freqCounterGraphics.getFrequency(), 0) + " Hz / " +
                         cStr(freqCounterHaptics.getFrequency(), 0) + " Hz");
 
+    //update timer data
+    labelTimer->setText("Time elapsed: " + cStr(elapsedTime.count()) + " Seconds");
+
+    //update win time
+    labelDrawTime->setText("Draw Time: " + cStr(drawTime.count()) + " Seconds");
+
     // update position of label
     labelRates->setLocalPos((int)(0.5 * (displayW - labelRates->getWidth())), 15);
 
@@ -1137,7 +1185,13 @@ void renderGraphics(void)
     labelMessage->setLocalPos((int)(0.5 * (displayW - labelMessage->getWidth())), 40);
 
     // update position of label Accuracy
-    labelAccuracy->setLocalPos((int)(0.5 * (displayW - labelAccuracy->getWidth())), (int)(displayH - 40));
+    labelAccuracy->setLocalPos((int)(0.5 * (displayW - labelAccuracy->getWidth())), (int)(displayH - 25));
+
+        //update position of timer label
+    labelTimer->setLocalPos((int)(0.5 * (displayW - labelTimer->getWidth())), displayH - 50);
+
+    //update position of win time label
+    labelDrawTime->setLocalPos((int)(0.5 * (displayW - labelDrawTime->getWidth())), displayH - 75);
 
 
     /////////////////////////////////////////////////////////////////////
@@ -1184,6 +1238,7 @@ void renderHaptics(void)
         cHapticDeviceInfo hapticDeviceInfo = hapticDevice->getSpecifications();  
         //    
 
+
     // main haptic simulation loop
     while(simulationRunning)
     {
@@ -1207,6 +1262,13 @@ void renderHaptics(void)
         hapticDevice->getPosition(hapticPosition);
         if(hapticPosition.x() > -0.023) {
             tool->setRadius(0.01*((hapticPosition.x()*45+2.1)));
+        }
+
+        // calculate time elapsed
+        if (timerStarted)
+        {
+            auto timeEnd = chrono::high_resolution_clock::now();
+            elapsedTime = timeEnd - timeStart;
         }
 
 
@@ -1357,6 +1419,9 @@ void renderHaptics(void)
 
                 // update texture
                 canvas->m_texture->markForUpdate();
+
+                // start timer
+                StartTimer();
             }
         }
 
@@ -1374,6 +1439,7 @@ void renderHaptics(void)
         drawCanvasCircle(500, 500, 250, 25, "blue");
         StoreColors();
         drawing1 = false;
+        timerStarted = 0;
         }
 
 
@@ -1399,6 +1465,7 @@ void renderHaptics(void)
             drawCanvasCircle(250, 250, 175, 25, "blue");
             StoreColors();
             drawing2 = false;
+            timerStarted = 0;
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
@@ -1419,6 +1486,7 @@ void renderHaptics(void)
             drawCanvasLine(800, 200, 200, 200, 25, "green");
             StoreColors();
             drawing3 = false;
+            timerStarted = 0;
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
@@ -1439,6 +1507,7 @@ void renderHaptics(void)
             drawCanvasLine(800, 200, 200, 200, 25, "blue");
             StoreColors();
             drawing4 = false;
+            timerStarted = 0;
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
@@ -1471,9 +1540,9 @@ void renderHaptics(void)
         cVector3d position;
         hapticDevice->getPosition(position);
 
-        std::cout << "preparing to sendVector"<< std::endl;          
+        //std::cout << "preparing to sendVector"<< std::endl;          
         server.sendVector(position);
-        std::cout << "sendVector complete"<< std::endl;  
+        //std::cout << "sendVector complete"<< std::endl;  
 
         // signal frequency counter
         freqCounterHaptics.signal(1);

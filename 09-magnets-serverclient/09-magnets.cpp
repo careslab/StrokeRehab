@@ -198,6 +198,9 @@ int Resetting = 0;
 //1/17/25 addition
 SocketClientServer server;
 
+// is the server/client running?
+bool serverRunning = false;
+
 
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
@@ -254,6 +257,7 @@ int main(int argc, char* argv[])
     cout << "[f] - Enable/Disable full screen mode" << endl;
     cout << "[m] - Enable/Disable vertical mirroring" << endl;
     cout << "[q] - Exit application" << endl;
+    cout << "[0] - Enable Server Mode" << endl;
     cout << endl << endl;
 
 
@@ -784,6 +788,35 @@ void onKeyCallback(GLFWwindow* a_window, int a_key, int a_scancode, int a_action
         mirroredDisplay = !mirroredDisplay;
         camera->setMirrorVertical(mirroredDisplay);
     }
+
+    // enable server client connection
+    else if (a_key == GLFW_KEY_0)
+    {
+    if (!serverRunning){
+        pid_t pid = fork();
+
+    if (pid == 0) {
+        // Child process
+        std::cout << "Child process: executing client" << std::endl;
+        execl("./client", nullptr);
+
+        // If execl returns, it means an error occurred
+        std::cerr << "Error executing command" << std::endl;
+        exit(1);
+    } else if (pid > 0) {
+        // Parent process
+        std::cout << "Parent process: child running" << std::endl;
+    } else {
+        // Fork failed
+        std::cerr << "Fork failed" << std::endl;
+        exit(1);
+    }
+        cout << "preparing to initialize server on server.cpp"<< endl;     
+        server.initializeServer(PORT);
+        cout << "server initialized on server.cpp"<< endl;
+        serverRunning = 1;
+    }
+}
 }
 
 //------------------------------------------------------------------------------
@@ -807,14 +840,14 @@ void close(void)
 void renderGraphics(void)
 {
 
-    static int first = 1;
+/*     static int first = 1;
     if (first){
     //1/16/25 addition
     cout << "preparing to initialize server on server.cpp"<< endl;     
     server.initializeServer(PORT);
     cout << "server initialized on server.cpp"<< endl;
     first=0;
-    }
+    } */
 
     // sanity check
     if (viewport == nullptr) { return; }
@@ -953,7 +986,7 @@ void renderHaptics(void)
         }
 
         // win conditions and reset
-        if (spheresOverLine == 16)
+        if (spheresOverLine == 16 && !Resetting)
         {
             winTime = elapsedTime;
             Resetting = 1;
@@ -1175,9 +1208,11 @@ void renderHaptics(void)
         // send computed force to haptic device
         hapticDevice->setForce(stiffnessRatio * forceHaptic);
         //1/17/25 addition
-        std::cout << "preparing to sendVector"<< std::endl;          
-        server.sendVector(position);
-        std::cout << "sendVector complete"<< std::endl;        
+        //std::cout << "preparing to sendVector"<< std::endl;       
+        if (serverRunning){
+            server.sendVector(position);
+        }   
+        //std::cout << "sendVector complete"<< std::endl;        
     }
 
     // close  connection to haptic device

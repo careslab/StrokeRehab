@@ -53,6 +53,9 @@ using namespace chai3d;
 using namespace std;
 //------------------------------------------------------------------------------
 #include "falconClientServer/falconClientServer.h"
+#include <cstdlib>
+#include <unistd.h>
+#include <sys/wait.h>
 //------------------------------------------------------------------------------
 // GENERAL SETTINGS
 //------------------------------------------------------------------------------
@@ -205,6 +208,13 @@ chrono::duration<double> elapsedTime = chrono::seconds(0);
 
 // Draw Time Variable
 chrono::duration<double> drawTime = chrono::seconds(0);
+
+// Output file
+        auto currentpath = cGetCurrentPath();
+        ofstream outputFile(currentpath + "../DrawText/drawstats.txt", ios::app);
+
+// is the server/client running?
+bool serverRunning = false;
 
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
@@ -492,6 +502,24 @@ accuracy = (accuracy/totalColored)*100;
 
 labelAccuracy->setText("Accuracy: " + cStr(accuracy, 0) + "%");
 
+            //output draw time to txt file
+            time_t currentTime = time(0);
+            tm* localCurrentTime = localtime(&currentTime);
+            char buffer[80];
+            strftime(buffer, sizeof(buffer), "%c", localCurrentTime);
+
+
+            if (outputFile.is_open())
+            {
+                outputFile << "\nDate and Time: " << buffer << "\n" << "Draw Time: " << drawTime.count() << " Seconds\n"
+                 << "Accuracy: " << accuracy << "%\n";
+                outputFile.close();
+            }
+            else
+            {
+                cout << "Error opening file" << endl;
+            }
+
 }
 
 void StartTimer() {
@@ -531,6 +559,7 @@ int main(int argc, char* argv[])
     cout << "[f] - Enable/Disable full screen mode" << endl;
     cout << "[m] - Enable/Disable vertical mirroring" << endl;
     cout << "[q] - Exit application" << endl;
+    cout << "[0] - Enable Server Mode" << endl;
     cout << endl << endl;
 
     // get current path
@@ -1121,8 +1150,36 @@ void onKeyCallback(GLFWwindow* a_window, int a_key, int a_scancode, int a_action
     {
         drawing6 = true;
     }
-}
 
+    // enable server client connection
+    else if (a_key == GLFW_KEY_0)
+    {
+    if (!serverRunning){
+        pid_t pid = fork();
+
+    if (pid == 0) {
+        // Child process
+        std::cout << "Child process: executing client" << std::endl;
+        execl("./client", nullptr);
+
+        // If execl returns, it means an error occurred
+        std::cerr << "Error executing command" << std::endl;
+        exit(1);
+    } else if (pid > 0) {
+        // Parent process
+        std::cout << "Parent process: child running" << std::endl;
+    } else {
+        // Fork failed
+        std::cerr << "Fork failed" << std::endl;
+        exit(1);
+    }
+        cout << "preparing to initialize server on server.cpp"<< endl;     
+        server.initializeServer(PORT);
+        cout << "server initialized on server.cpp"<< endl;
+        serverRunning = 1;
+    }
+}
+}
 //------------------------------------------------------------------------------
 
 void close(void)
@@ -1147,14 +1204,14 @@ void close(void)
 void renderGraphics(void)
 {
 
-    static int first = 1;
+/*     static int first = 1;
     if (first){
     //1/16/25 addition
     cout << "preparing to initialize server on server.cpp"<< endl;     
     server.initializeServer(PORT);
     cout << "server initialized on server.cpp"<< endl;
     first=0;
-    }
+    } */
 
 
     // sanity check
@@ -1526,7 +1583,7 @@ void renderHaptics(void)
 
         if (button0 && (button0 != b0PreviousState)){
             GradeAccuracy();
-            cout << "accuracy: " << accuracy << "%" << endl;
+            //cout << "accuracy: " << accuracy << "%" << endl;
             b0PreviousState = button0;
         }
 
@@ -1540,8 +1597,11 @@ void renderHaptics(void)
         cVector3d position;
         hapticDevice->getPosition(position);
 
-        //std::cout << "preparing to sendVector"<< std::endl;          
-        server.sendVector(position);
+        //std::cout << "preparing to sendVector"<< std::endl;   
+        if (serverRunning)
+        {
+            server.sendVector(position);
+        }       
         //std::cout << "sendVector complete"<< std::endl;  
 
         // signal frequency counter

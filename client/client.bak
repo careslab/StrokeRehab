@@ -1,0 +1,134 @@
+#include <iostream>/**/
+#include "falconClientServer/falconClientServer.h"
+#include "chai3d.h"
+#include <math.h>
+//------------------------------------------------------------------------------
+#include <GLFW/glfw3.h>
+//------------------------------------------------------------------------------
+#include <cstring>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+
+using namespace chai3d;
+using namespace std;
+int Kp;
+
+//namespace chai3d {
+//SocketClientServer client;
+chai3d::SocketClientServer client;
+cVector3d receivedForceVector (0,0,0);
+    
+// a pointer to the current haptic device
+cGenericHapticDevicePtr hapticDevice;
+
+
+//1/16/24
+//persistent undefined references to any function/constructor/instance of "SocketClientServer" when using make
+//something isnt referencing
+//UPDATE FIXED: namespace definition errors. 
+
+int main(int argc, char* argv[]) {
+    // Create an instance of SocketClientServer for the client  
+    if(argc < 2){
+        Kp = -100;
+    }else{
+        Kp = std::atoi(argv[1]);
+    }
+
+    //see falconClientServer.cpp for updated first come first serve acquisition
+   hapticDevice = client.initializeHapticDevice();
+
+
+
+    // Initialize the client to connect to the server
+     if (!client.initializeClient("127.0.0.1", PORT)) {
+        cerr << "Failed to connect to server" << endl;
+     
+    }
+    
+    //client.acceptConnection();
+    //initiialize device to 0 mark
+    hapticDevice->setForceAndTorqueAndGripperForce(receivedForceVector, 0, 0);
+
+    while(true){
+    
+        if (!client.receiveVector(receivedForceVector)) {
+            cerr << "Failed to receive vector from server" << endl;
+            return -1;
+        }
+        // Output the received vector data
+        cout << "Connected: " <<receivedForceVector << endl;
+        //cout << "x = " << receivedForceVector.x << ", y = " << receivedForceVector.y << ", z = " << receivedForceVector.z << endl;
+
+            // compute linear force
+            //kp reference chart for 01-mydevice
+            // -200: was too sharp
+            // -1: weak but smooth
+            //  -50: acceptable 
+            //kp reference chart for 09-magnets
+            //-50 was FAR too strong
+            //-20 was a bit too much
+            //-1 was too weak            
+
+
+
+            //double Kp = -100; // [N/m] //depreciated in favor of ARGc ARGV
+        //remember negative for orientation
+        hapticDevice->setForceAndTorqueAndGripperForce( Kp*receivedForceVector, 0, 0);
+
+
+
+    }
+
+    return 0;
+
+    
+}
+
+
+
+//}       //using namespace chai3d
+
+
+
+
+
+
+//old manual clientcode
+//replaced by falconClientServer.cpp
+
+/*
+
+int main(int argc, char* argv[]) {
+    // Create an instance of SocketClientServer for the client  
+
+    // Initialize the client to connect to the server
+     if (!client.initializeClient("127.0.0.1", PORT)) {
+        cerr << "Failed to connect to server" << endl;
+        return -1;
+    }
+    
+
+    // Receive the vector data from the server
+    cVector3d receivedForceVector;
+
+    //client.acceptConnection();
+    
+    if (!client.receiveVector(receivedForceVector)) {
+        cerr << "Failed to receive vector from server" << endl;
+        return -1;
+    }
+
+    // Output the received vector data
+    cout << "Received force vector from server:" <<receivedForceVector << endl;
+    //cout << "x = " << receivedForceVector.x << ", y = " << receivedForceVector.y << ", z = " << receivedForceVector.z << endl;
+
+    return 0;
+
+    
+    }
+
+*/

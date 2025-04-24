@@ -1,0 +1,569 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "extras/GLFW/libglfw.a"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"add_definitions",
+			"include_directories"
+		],
+		"files" : 
+		[
+			"extras/GLFW/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 90,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 204,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 132,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 82,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 208,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 87,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 100,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 150,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 151,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 152,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 153,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 154,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 155,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 156,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 157,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 158,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 159,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 160,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 161,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 162,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 163,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 164,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 165,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 166,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 167,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 168,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 169,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 59,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 73,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "   -fPIC -march=native -Wno-deprecated -g  "
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 3,
+					"define" : "AL_ALEXT_PROTOTYPES"
+				},
+				{
+					"backtrace" : 3,
+					"define" : "AL_BUILD_LIBRARY"
+				},
+				{
+					"backtrace" : 3,
+					"define" : "AL_LIBTYPE_STATIC"
+				},
+				{
+					"backtrace" : 3,
+					"define" : "GLEW_STATIC"
+				},
+				{
+					"backtrace" : 4,
+					"define" : "LINUX"
+				},
+				{
+					"backtrace" : 3,
+					"define" : "PNG_ARM_NEON_OPT=0"
+				},
+				{
+					"backtrace" : 5,
+					"define" : "_GLFW_X11"
+				},
+				{
+					"backtrace" : 3,
+					"define" : "_LIB"
+				},
+				{
+					"backtrace" : 6,
+					"define" : "__LINUX_ALSA__"
+				},
+				{
+					"backtrace" : 3,
+					"define" : "__THEORA"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 7,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/OPENGL_INCLUDE_DIR"
+				},
+				{
+					"backtrace" : 8,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/DHD/include"
+				},
+				{
+					"backtrace" : 9,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/src"
+				},
+				{
+					"backtrace" : 10,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/Eigen"
+				},
+				{
+					"backtrace" : 11,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/glew/include"
+				},
+				{
+					"backtrace" : 12,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/giflib/include"
+				},
+				{
+					"backtrace" : 13,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/lib3ds/include"
+				},
+				{
+					"backtrace" : 14,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/libjpeg/include"
+				},
+				{
+					"backtrace" : 15,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/libpng/include"
+				},
+				{
+					"backtrace" : 16,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/minimp3/include"
+				},
+				{
+					"backtrace" : 17,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/openal/include"
+				},
+				{
+					"backtrace" : 18,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/openal/OpenAL32/Include"
+				},
+				{
+					"backtrace" : 19,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/openal/Alc"
+				},
+				{
+					"backtrace" : 20,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/pugixml/include"
+				},
+				{
+					"backtrace" : 21,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/STB/include"
+				},
+				{
+					"backtrace" : 22,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/theoraplayer/include/theoraplayer"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/theoraplayer/externals/ogg/include"
+				},
+				{
+					"backtrace" : 24,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/theoraplayer/externals/theora/include"
+				},
+				{
+					"backtrace" : 25,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/theoraplayer/externals/vorbis/include"
+				},
+				{
+					"backtrace" : 26,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/theoraplayer/externals/vorbis/lib"
+				},
+				{
+					"backtrace" : 27,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/theoraplayer/src/Theora"
+				},
+				{
+					"backtrace" : 28,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/externals/RtMidi"
+				},
+				{
+					"backtrace" : 29,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/extras/GLFW/OPENGL_INCLUDE_DIR"
+				},
+				{
+					"backtrace" : 30,
+					"path" : "/home/cares/Documents/StrokeRehabProject/Chai3dGUI-Qt5/chai3d-3.3.0/extras/GLFW/include"
+				}
+			],
+			"language" : "C",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22
+			]
+		}
+	],
+	"id" : "glfw::@315c9cf95d271d8f9050",
+	"name" : "glfw",
+	"nameOnDisk" : "libglfw.a",
+	"paths" : 
+	{
+		"build" : "extras/GLFW",
+		"source" : "extras/GLFW"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/context.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/init.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/input.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/monitor.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/vulkan.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/window.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/null_init.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/null_joystick.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/null_monitor.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/null_window.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/platform.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/x11_init.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/x11_monitor.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/x11_window.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/xkb_unicode.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/posix_module.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/posix_poll.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/posix_time.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/posix_thread.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/glx_context.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/egl_context.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/osmesa_context.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "extras/GLFW/src/linux_joystick.c",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

@@ -49,7 +49,11 @@
 #include <fstream>
 #include <ctime>
 //1/17/25 addition
-//#include "falconClientServer/falconClientServer.h"
+#include "falconClientServer/falconClientServer.h"
+
+#include <QApplication>
+#include "mainwindow.h"
+#include <QThread>
 //------------------------------------------------------------------------------
 using namespace chai3d;
 using namespace std;
@@ -196,7 +200,47 @@ int Resetting = 0;
 
 //clientServerSoftware class test variable
 //1/17/25 addition
-//SocketClientServer server;
+SocketClientServer server;
+
+//guiValueServer
+SocketClientServer server2;
+
+//guiValueServerSendVector
+cVector3d guiServerValues (0, 0, 0);
+
+// is the server/client running?
+bool serverRunning = false;
+
+// GUI global pointer
+MainWindow *globalMainWindow = nullptr;
+
+// GUI application global pointer
+QApplication *globalApplication = nullptr;
+
+// GUI thread
+cThread* guiThread;
+
+// GUI data collected?
+bool guiDataCollected = false;
+
+// Win Time Data Written
+bool winTimeDataWritten = false;
+
+// GUI values
+string userID;
+bool fillInfoButtonClicked = false;
+bool saveInfoButtonClicked = false;
+bool leftHanded = false;
+bool rightHanded = false;
+bool strokedLeftArm = false;
+bool strokedRightArm = false;
+bool strokedBothArm = false;
+int mirroringStrength = 2000;
+int gloveIntensity = 50;
+double gloveDeadzone = 0.005; //arbitrary values
+bool mirroringEnabled = false;
+string gameAttemptsFolder;
+
 
 
 //------------------------------------------------------------------------------
@@ -227,6 +271,9 @@ void renderHaptics(void);
 // this function closes the application
 void close(void);
 
+//this function runs the GUI
+void runGUI(void);
+
 
 //==============================================================================
 /*
@@ -240,6 +287,9 @@ void close(void);
 
 int main(int argc, char* argv[])
 {
+
+
+
     //--------------------------------------------------------------------------
     // INITIALIZATION
     //--------------------------------------------------------------------------
@@ -254,6 +304,7 @@ int main(int argc, char* argv[])
     cout << "[f] - Enable/Disable full screen mode" << endl;
     cout << "[m] - Enable/Disable vertical mirroring" << endl;
     cout << "[q] - Exit application" << endl;
+    cout << "[0] - Enable Server Mode" << endl;
     cout << endl << endl;
 
 
@@ -667,6 +718,23 @@ int main(int argc, char* argv[])
     hapticsThread = new cThread();
     hapticsThread->start(renderHaptics, CTHREAD_PRIORITY_HAPTICS);
 
+    //--------------------------------------------------------------------------
+    // GUI USER INITIALIZATION
+    //--------------------------------------------------------------------------
+
+    QApplication a(argc, argv);
+    globalApplication = &a;
+    MainWindow w;
+    globalMainWindow = &w;
+    w.show();
+
+    //--------------------------------------------------------------------------
+    // START GUI THREAD
+    //--------------------------------------------------------------------------
+
+    guiThread = new cThread();
+    guiThread->start(runGUI, CTHREAD_PRIORITY_GUI);
+
     // setup callback when application exits
     atexit(close);
 
@@ -683,6 +751,11 @@ int main(int argc, char* argv[])
 
         // process events
         glfwPollEvents();
+
+        //process GUI events
+        globalApplication->processEvents();
+
+
     }
 
     // close window
@@ -784,6 +857,48 @@ void onKeyCallback(GLFWwindow* a_window, int a_key, int a_scancode, int a_action
         mirroredDisplay = !mirroredDisplay;
         camera->setMirrorVertical(mirroredDisplay);
     }
+
+    // enable server client connection
+    else if (a_key == GLFW_KEY_0)
+    {
+
+    if (!serverRunning){
+        pid_t pid = fork();
+
+    if (pid == 0) {
+        // Child process
+        std::cout << "Child process: executing client" << std::endl;
+        execl("./client", nullptr);
+
+        // If execl returns, it means an error occurred
+        std::cerr << "Error executing command" << std::endl;
+        exit(1);
+    } else if (pid > 0) {
+        // Parent process
+        std::cout << "Parent process: child running" << std::endl;
+    } else {
+        // Fork failed
+        std::cerr << "Fork failed" << std::endl;
+        exit(1);
+    }
+        cout << "preparing to initialize server on server.cpp"<< endl;     
+        server.initializeServer(PORT);
+        cout << "server initialized on server.cpp"<< endl;
+
+        cout << "preparing to initialize GUIserver on server.cpp"<< endl;
+        server2.initializeServer(5002);
+        cout << "GUIserver initialized on server.cpp"<< endl;
+        serverRunning = 1;
+
+    }
+
+
+}
+    //TEST GET USERID
+    else if (a_key == GLFW_KEY_I){
+        string UserID = globalMainWindow->returnUserId();
+        std::cout << "UserID: " << UserID << std::endl;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -807,14 +922,17 @@ void close(void)
 void renderGraphics(void)
 {
 
-    static int first = 1;
+/*     static int first = 1;
     if (first){
     //1/16/25 addition
-    //cout << "preparing to initialize server on server.cpp"<< endl;     
-    //server.initializeServer(PORT);
-    //cout << "server initialized on server.cpp"<< endl;
+    cout << "preparing to initialize server on server.cpp"<< endl;     
+    server.initializeServer(PORT);
+    cout << "server initialized on server.cpp"<< endl;
     first=0;
-    }
+    } */
+
+
+
 
     // sanity check
     if (viewport == nullptr) { return; }
@@ -887,7 +1005,6 @@ void renderGraphics(void)
 void renderHaptics(void)
 {
 
-
     // simulation in now running
     simulationRunning  = true;
     simulationFinished = false;
@@ -953,7 +1070,7 @@ void renderHaptics(void)
         }
 
         // win conditions and reset
-        if (spheresOverLine == 16)
+        if (spheresOverLine == 16 && !Resetting)
         {
             winTime = elapsedTime;
             Resetting = 1;
@@ -978,24 +1095,7 @@ void renderHaptics(void)
                          SPHERE_RADIUS);
             }
 
-            //output win time to txt file
-            time_t currentTime = time(0);
-            tm* localCurrentTime = localtime(&currentTime);
-            char buffer[80];
-            strftime(buffer, sizeof(buffer), "%c", localCurrentTime);
-
-            auto currentpath = cGetCurrentPath();
-            ofstream outputFile(currentpath + "../WinText/magnetswins.txt", ios::app);
-
-            if (outputFile.is_open())
-            {
-                outputFile << "\nDate and Time: " << buffer << "\n" << "Win Time: " << winTime.count() << " Seconds\n";
-                outputFile.close();
-            }
-            else
-            {
-                cout << "Error opening file" << endl;
-            }
+            winTimeDataWritten = false;
         }
 
         /////////////////////////////////////////////////////////////////////////
@@ -1174,9 +1274,44 @@ void renderHaptics(void)
 
         // send computed force to haptic device
         hapticDevice->setForce(stiffnessRatio * forceHaptic);
+
+        //START SERVER
+        if (mirroringEnabled & (!serverRunning)){
+            pid_t pid = fork();
+
+            if (pid == 0) {
+                // Child process
+                std::cout << "Child process: executing client" << std::endl;
+                execl("./client", nullptr);
+
+                // If execl returns, it means an error occurred
+                std::cerr << "Error executing command" << std::endl;
+                exit(1);
+            } else if (pid > 0) {
+                // Parent process
+                std::cout << "Parent process: child running" << std::endl;
+            } else {
+                // Fork failed
+                std::cerr << "Fork failed" << std::endl;
+                exit(1);
+            }
+            cout << "preparing to initialize server on server.cpp"<< endl;
+            server.initializeServer(PORT);
+            cout << "server initialized on server.cpp"<< endl;
+
+            cout << "preparing to initialize GUIserver on server.cpp"<< endl;
+            server2.initializeServer(5002);
+            cout << "GUIserver initialized on server.cpp"<< endl;
+            serverRunning = 1;
+
+        }
+
         //1/17/25 addition
-        //std::cout << "preparing to sendVector"<< std::endl;          
-        //server.sendVector(stiffnessRatio * forceHaptic);
+        //std::cout << "preparing to sendVector"<< std::endl;       
+        if (serverRunning){
+            server.sendVector(position);
+            server2.sendVector(guiServerValues);
+        }   
         //std::cout << "sendVector complete"<< std::endl;        
     }
 
@@ -1188,3 +1323,63 @@ void renderHaptics(void)
 }
 
 //------------------------------------------------------------------------------
+
+void runGUI(void) {
+    //process GUI values
+    // Wait for GUI input
+    while (!guiDataCollected)
+    {
+        if (globalMainWindow->returnFillInfoButtonClicked() || globalMainWindow->returnSaveInfoButtonClicked())
+        {
+            userID = globalMainWindow->returnUserId();
+            leftHanded = globalMainWindow->returnLeftHanded();
+            rightHanded = globalMainWindow->returnRightHanded();
+            strokedLeftArm = globalMainWindow->returnStrokedLeftArm();
+            strokedRightArm = globalMainWindow->returnStrokedRightArm();
+            strokedBothArm = globalMainWindow->returnStrokedBothArm();
+            mirroringStrength = globalMainWindow->returnMirroringStrength();
+            gloveIntensity = globalMainWindow->returnGloveIntensity();
+            gloveDeadzone = globalMainWindow->returnGloveDeadzone();
+            mirroringEnabled = globalMainWindow->returnMirroringEnabled();
+            gameAttemptsFolder = globalMainWindow->returnGameAttemptsFolder();
+            guiDataCollected = true;
+        }
+    } //end while loop
+    while (simulationRunning)
+    {
+    mirroringStrength = globalMainWindow->returnMirroringStrength();
+    gloveIntensity = globalMainWindow->returnGloveIntensity();
+    gloveDeadzone = globalMainWindow->returnGloveDeadzone();
+    guiServerValues.set(mirroringStrength, 0, 0);
+    mirroringEnabled = globalMainWindow->returnMirroringEnabled();
+
+    //send time elapsed
+    globalMainWindow->getTimeElapsed(elapsedTime.count());
+
+    //output win time to txt file
+    if (Resetting & !winTimeDataWritten)
+    {
+    time_t currentTime = time(0);
+    tm* localCurrentTime = localtime(&currentTime);
+    char buffer[80];
+    strftime(buffer, sizeof(buffer), "%c", localCurrentTime);
+
+    auto currentpath = cGetCurrentPath();
+
+    string gameAttemptsFile = userID + "-Magnets-" + buffer;
+    ofstream outputFile(currentpath + "../Users/" + userID + gameAttemptsFolder + "/" + gameAttemptsFile, ios::out);
+
+    if (outputFile.is_open())
+    {
+        outputFile << winTime.count() << " :Win Time";
+        outputFile.close();
+    }
+    else
+    {
+        cout << "Error opening file" << endl;
+    }
+    winTimeDataWritten = true;
+    }
+
+    } //end while loop
+}

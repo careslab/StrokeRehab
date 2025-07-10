@@ -43,15 +43,23 @@
 
 //------------------------------------------------------------------------------
 #include "chai3d.h"
-//1/16/25 addition JML
-//#include "falconClientServer/falconClientServer.h"
+#include <chrono>
+#include <fstream>
+#include <ctime>
 //------------------------------------------------------------------------------
 #include <GLFW/glfw3.h>
 //------------------------------------------------------------------------------
 using namespace chai3d;
 using namespace std;
 //------------------------------------------------------------------------------
+#include "falconClientServer/falconClientServer.h"
+#include <cstdlib>
+#include <unistd.h>
+#include <sys/wait.h>
 
+#include <QApplication>
+#include "mainwindow.h"
+#include <QThread>
 //------------------------------------------------------------------------------
 // GENERAL SETTINGS
 //------------------------------------------------------------------------------
@@ -102,9 +110,13 @@ cMesh* palette;
 
 // a mesh object to model a piece of canvas
 cMesh* canvas;
+cMesh* mirrorCanvas; //mirrorCanvas added 7-9-25 JML
+
+int mirrorCanvasVisible = 0; //mirrorCanvas vibility toggle added 7-10-25
 
 // copy of blank canvas texture
 cImagePtr canvasOriginal;
+cImagePtr mirrorCanvasOriginal;
 
 // selected paint color
 cColorb paintColor;
@@ -123,6 +135,12 @@ cLabel* labelRates;
 
 // a label to display the accuracy of the drawing
 cLabel* labelAccuracy;
+
+// a label to display the timer
+cLabel* labelTimer;
+
+// a label for the win time
+cLabel* labelDrawTime;
 
 // a flag that indicates if the haptic simulation is currently running
 bool simulationRunning = false;
@@ -164,19 +182,88 @@ cColorb brushyellow;
 cColorb brushgreen;
 
 // Arrays to hold color values
-int trueRed[1000][1000];
-int trueGreen[1000][1000];
-int trueBlue[1000][1000];
-int drawnRed[1000][1000];
-int drawnGreen[1000][1000];
-int drawnBlue[1000][1000];
+int trueRed[1024][1024];
+int trueGreen[1024][1024];
+int trueBlue[1024][1024];
+int drawnRed[1024][1024];
+int drawnGreen[1024][1024];
+int drawnBlue[1024][1024];
 
 //accuracy variable
 double accuracy;
 
-//1/23/25 modified JML
+//what shape is being drawn?
+string globalShape;
+
 //clientServerSoftware class test variable
-//SocketClientServer server;
+SocketClientServer server;
+
+//guiValueServer
+SocketClientServer server2;
+
+//guiValueServerSendVector
+cVector3d guiServerValues (0, 0, 0);
+
+// variables to activate shape drawing from key press
+bool drawing1 = false;
+bool drawing2 = false;
+bool drawing3 = false;
+bool drawing4 = false;
+bool drawing5 = false;
+bool drawing6 = false;
+bool mirrorCanvasToggle = false;
+
+// variable to hold button 0 state for edge driven activation
+bool b0PreviousState = false;
+
+// timer variables
+// Timer Started Variable
+int timerStarted = 0;
+chrono::high_resolution_clock::time_point timeStart = chrono::high_resolution_clock::now();
+
+// Elapsed Time Variable
+chrono::duration<double> elapsedTime = chrono::seconds(0);
+
+// Draw Time Variable
+chrono::duration<double> drawTime = chrono::seconds(0);
+
+// Output file
+        auto currentpath = cGetCurrentPath();
+        ofstream outputFile(currentpath + "../DrawText/drawstats.txt", ios::app);
+
+// is the server/client running?
+bool serverRunning = false;
+
+        // GUI global pointer
+        MainWindow *globalMainWindow = nullptr;
+
+        // GUI application global pointer
+        QApplication *globalApplication = nullptr;
+
+        // GUI thread
+        cThread* guiThread;
+
+        // GUI data collected?
+        bool guiDataCollected = false;
+
+        // Win Time Data Written
+        bool winTimeDataWritten = false;
+
+        // GUI values
+        string userID;
+        bool fillInfoButtonClicked = false;
+        bool saveInfoButtonClicked = false;
+        bool leftHanded = false;
+        bool rightHanded = false;
+        bool strokedLeftArm = false;
+        bool strokedRightArm = false;
+        bool strokedBothArm = false;
+        int mirroringStrength = 2000;
+        int gloveIntensity = 50;
+        double gloveDeadzone = 0.005; //arbitrary values
+        bool mirroringEnabled = false;
+        string gameAttemptsFolder;
+
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
 //------------------------------------------------------------------------------
@@ -205,6 +292,9 @@ void renderHaptics(void);
 // this function closes the application
 void close(void);
 
+//this function runs the GUI
+void runGUI(void);
+
 // this function clears the canvas to white
 void clearCanvas() {
     int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
@@ -226,6 +316,7 @@ void clearCanvas() {
                             if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
                             {
                                 canvas->m_texture->m_image->setPixelColor(x, y, newColor);
+                                mirrorCanvas->m_texture->m_image->setPixelColor(x, y, newColor);
                             }
                         
                     }
@@ -233,46 +324,11 @@ void clearCanvas() {
 
                 // update texture
                 canvas->m_texture->markForUpdate();
+                mirrorCanvas->m_texture->markForUpdate();
 }
 
 // this function draws a line on the canvas
-/* void drawCanvasLine(double x1, double y1, double x2, double y2, double size) {
-    int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
-    int canvasHeight = (int)canvas->m_texture->m_image->getHeight();
-    double m = (y2 - y1) / (x2 - x1);
-    double b = y1 - (m * x1);
 
-
-        
-                for (int x=0; x<canvasWidth; x++)
-                {
-                    for (int y=0; y<canvasHeight; y++)
-                    {                        
-                        // compute new color percentage
-                        if (((y < (m*x) + b + size & y > (m*x) + b - size) | (x < (y-b)/m + size & x > (y-b)/m - size)) & x > x1 & x < x2)
-                        {
-                            cColorb newColor;
-
-                            // compute new color
-                            GLubyte R = (GLubyte)cClamp((240.0), 130.0, 254.0);
-                            GLubyte G = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                            GLubyte B = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                            newColor.set(R, G, B);
-
-                            // assign new color to pixel
-                            if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
-                            {
-                                canvas->m_texture->m_image->setPixelColor(x, y, newColor);
-                            }
-
-                            
-                        }
-                    }
-                }
-
-                // update texture
-                canvas->m_texture->markForUpdate();
-} */
 
 void drawCanvasLine(double x1, double y1, double x2, double y2, double size, string incolor) {
     int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
@@ -445,57 +501,86 @@ void GradeAccuracy() {
     int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
     int canvasHeight = (int)canvas->m_texture->m_image->getHeight();
     accuracy = 0.0;
-    int resultRed[1000][1000];
-    int resultGreen[1000][1000];
-    int resultBlue[1000][1000];
     double totalColored = 0;
 
-    for (int x=0; x<canvasWidth; x++)
-                {
-                    for (int y=0; y<canvasHeight; y++)
-                    {
-                        cColorb newColor;
-                        if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
-                            {
-                                canvas->m_texture->m_image->getPixelColor(x, y, newColor);
-                            }
+    drawTime = elapsedTime;
+    timerStarted = 0;
 
-                            // store each rgb value
-                            GLubyte R = newColor.getR();
-                            GLubyte G = newColor.getG();
-                            GLubyte B = newColor.getB();
-                        
-                        if ((x<1000) && (y<1000)) {
-                            if (newColor != brushblue & newColor != brushred & newColor != brushyellow & newColor != brushgreen) {
-                            drawnRed[x][y] = 5000;
-                            drawnGreen[x][y] = 5000;
-                            drawnBlue[x][y] = 5000;
-                            }
-                            else {
-                            drawnRed[x][y] = static_cast<int>(R);
-                            drawnGreen[x][y] = static_cast<int>(G);
-                            drawnBlue[x][y] = static_cast<int>(B);
-                            }
-                            
-                        //perform check to see if each pixel is the correct color
-                        resultRed[x][y] = drawnRed[x][y] - trueRed[x][y];
-                        resultGreen[x][y] = drawnGreen[x][y] - trueGreen[x][y];
-                        resultBlue[x][y] = drawnBlue[x][y] - trueBlue[x][y];
-                        if (trueRed[x][y] == 5000) {
-                            if(resultRed[x][y] != 0 & resultGreen[x][y] != 0 & resultBlue[x][y] != 0) {accuracy = accuracy - 0.5;}
-                        }
-                        
-                        else {
-                            if(resultRed[x][y] == 0 & resultGreen[x][y] == 0 & resultBlue[x][y] == 0) {accuracy = accuracy + 1;}
-                            totalColored = totalColored + 1;
-                            }
-                        }
-                    }
+    for (int x = 0; x < canvasWidth; x++) {
+        for (int y = 0; y < canvasHeight; y++) {
+            cColorb newColor;
+            if ((x >= 0) && (y >= 0) && (x < canvasWidth) && (y < canvasHeight)) {
+                canvas->m_texture->m_image->getPixelColor(x, y, newColor);
+            }
+
+            GLubyte R = newColor.getR();
+            GLubyte G = newColor.getG();
+            GLubyte B = newColor.getB();
+
+            if ((x < 1000) && (y < 1000)) {
+                if (newColor != brushblue && newColor != brushred && newColor != brushyellow && newColor != brushgreen) {
+                    drawnRed[x][y] = 5000;
+                    drawnGreen[x][y] = 5000;
+                    drawnBlue[x][y] = 5000;
+                } else {
+                    drawnRed[x][y] = static_cast<int>(R);
+                    drawnGreen[x][y] = static_cast<int>(G);
+                    drawnBlue[x][y] = static_cast<int>(B);
                 }
-accuracy = (accuracy/totalColored)*100;
 
-labelAccuracy->setText("Accuracy: " + cStr(accuracy, 0) + "%");
+                int diffRed = drawnRed[x][y] - trueRed[x][y];
+                int diffGreen = drawnGreen[x][y] - trueGreen[x][y];
+                int diffBlue = drawnBlue[x][y] - trueBlue[x][y];
 
+                if (trueRed[x][y] == 5000) {
+                    if (diffRed != 0 && diffGreen != 0 && diffBlue != 0) {
+                        accuracy -= 0.5;
+                    }
+                } else {
+                    if (diffRed == 0 && diffGreen == 0 && diffBlue == 0) {
+                        accuracy += 1;
+                    }
+                    totalColored += 1;
+                }
+            }
+        }
+    }
+
+    if (totalColored > 0) {
+        accuracy = (accuracy / totalColored) * 100;
+    } else {
+        accuracy = 0;
+    }
+
+    labelAccuracy->setText("Accuracy: " + cStr(accuracy, 0) + "%");
+
+
+
+        time_t currentTime = time(0);
+        tm* localCurrentTime = localtime(&currentTime);
+        char buffer[80];
+        strftime(buffer, sizeof(buffer), "%c", localCurrentTime);
+        auto currentpath = cGetCurrentPath();
+
+        string gameAttemptsFile = userID + "-Paint-" + buffer;
+        ofstream outputFile(currentpath + "../Users/" + userID + gameAttemptsFolder + "/" + gameAttemptsFile, ios::out);
+        if (outputFile.is_open())
+        {
+            outputFile << globalShape << " :Shape\n" << drawTime.count() << " :Draw Time\n" << accuracy << " :Accuracy";
+            outputFile.close();
+        }
+        else
+        {
+            cout << "Error opening file" << endl;
+        }
+
+}
+
+void StartTimer() {
+    if (!timerStarted) {
+        timeStart = chrono::high_resolution_clock::now();
+        timerStarted = 1;
+    }
 }
 
 
@@ -528,6 +613,7 @@ int main(int argc, char* argv[])
     cout << "[f] - Enable/Disable full screen mode" << endl;
     cout << "[m] - Enable/Disable vertical mirroring" << endl;
     cout << "[q] - Exit application" << endl;
+    cout << "[0] - Enable Server Mode" << endl;
     cout << endl << endl;
 
     // get current path
@@ -808,15 +894,26 @@ int main(int argc, char* argv[])
     cCreatePlane(canvas, 0.8, 0.8); //0.5, 0.5 original
 
     // create collision detector
-    canvas->createBruteForceCollisionDetector();
+    canvas->createBruteForceCollisionDetector(); //jml 7-9-25 collision detecting test
+    //outcome: disabling collision meant the cursor passed through with no collision
+    //implication: by dynamically adjusting visbility/collision, can create a duplicate 'mirrored' canvas
+    //this mirrored canvas can then apply the +/-x coordinate multiplier on collision 
+    //with the normal canvas. a button press can make normal canvas invisible, and mirrored canvas
+    //visible. mirror canvas never needs haptic enabling!
 
     // add object to world
     world->addChild(canvas);
 
+    //7-9-25 JML update
+    //virtual mirroring note: by rotating the canvas around the global axis (IE flip it 180deg around Z axis)
+    //the hope is that this will give a 'mirroring' effect on screen; IE the user now views the backside of the canvas
+    //therefore this requires no x/y coordinate swapping; merely a difference in viewed location 
+    //IF this all works
+
     // set the position of the object
     canvas->setLocalPos(-0.25, 0.15, 0.0); //-0.25, 0.3, 0.0 original
-    canvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(90));
-    canvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(90));
+    canvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(90)); //originally cDegtoRad(90)
+    canvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(90)); //originally cDegtoRad(90)
 
     // create texture map
     canvas->m_texture = cTexture2d::create();
@@ -860,7 +957,74 @@ int main(int argc, char* argv[])
     brushred.set((GLubyte)254, (GLubyte)30, (GLubyte)30);
     brushyellow.set((GLubyte)234, (GLubyte)254, (GLubyte)56);
     brushgreen.set((GLubyte)30, (GLubyte)154, (GLubyte)49);
+    //clearCanvas(); //7-10-25 JML as mirrorCanvas (declared below) uses the same clearCanvas command
+    //this has been commented out and called in mirrorCanvas' creation
+
+
+    /////////////////////////////////////////////////////////////////////////
+    // MIRROR CANVAS:
+    //7-9-25 attempt to create a mirrored canvas object with no haptic presence
+    /////////////////////////////////////////////////////////////////////////
+
+    // create a mesh
+    mirrorCanvas = new cMesh();
+
+    // create a plane
+    cCreatePlane(mirrorCanvas, 0.8, 0.8); //0.5, 0.5 original
+
+    // add object to world
+    world->addChild(mirrorCanvas);
+
+    // set the position of the object
+    mirrorCanvas->setLocalPos(-0.25, 0.15, 0.0); //-0.25, 0.3, 0.0 original
+    mirrorCanvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(90)); //originally cDegtoRad(90)
+    mirrorCanvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(90)); //originally cDegtoRad(90)
+
+    // create texture map
+    mirrorCanvas->m_texture = cTexture2d::create();
+
+    // load texture image
+    fileload = mirrorCanvas->m_texture->loadFromFile(currentpath + "../resources/images/canvas.jpg");
+    if (!fileload)
+    {
+        cout << "Error - Texture image failed to load correctly." << endl;
+        close();
+        return (-1);
+    }
+
+    // create a copy of mirrorCanvas so that we can clear page when requested
+    mirrorCanvasOriginal = mirrorCanvas->m_texture->m_image->copy();
+
+    // we disable lighting properties for canvas
+    mirrorCanvas->setUseMaterial(false);
+
+    // enable texture mapping
+    mirrorCanvas->setUseTexture(true);
+
+    // create normal map from texture data
+    cNormalMapPtr mirrorNormalMap = cNormalMap::create();
+    mirrorNormalMap->createMap(mirrorCanvas->m_texture);
+    mirrorCanvas->m_normalMap = mirrorNormalMap;
+
+    //set colors
+    blue.set((GLubyte)130, (GLubyte)130, (GLubyte)254);
+    red.set((GLubyte)254, (GLubyte)130, (GLubyte)130);
+    yellow.set((GLubyte)254, (GLubyte)254, (GLubyte)156);
+    green.set((GLubyte)130, (GLubyte)254, (GLubyte)149);
+    brushblue.set((GLubyte)30, (GLubyte)30, (GLubyte)254);
+    brushred.set((GLubyte)254, (GLubyte)30, (GLubyte)30);
+    brushyellow.set((GLubyte)234, (GLubyte)254, (GLubyte)56);
+    brushgreen.set((GLubyte)30, (GLubyte)154, (GLubyte)49);
     clearCanvas();
+        //7-10-25 follow up comment JML from 7-9-25
+        //mirroring test by reflecting 'canvas' 180 degrees. successful test
+    mirrorCanvas->rotateAboutGlobalAxisRad(cVector3d(0,0,1), cDegToRad(180)); //originally cDegtoRad(90)
+    mirrorCanvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(0)); //originally cDegtoRad(90)            
+    mirrorCanvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(0)); //originally cDegtoRad(90)            
+     
+    mirrorCanvas->setShowEnabled(false);
+
+
 
 
     //--------------------------------------------------------------------------
@@ -893,6 +1057,20 @@ int main(int argc, char* argv[])
 
     // set font color
     labelAccuracy->m_fontColor.setGrayLevel(0.4);
+
+    // create a label for timer
+    labelTimer = new cLabel(font);
+    camera->m_frontLayer->addChild(labelTimer);
+
+    // set font color
+    labelTimer->m_fontColor.setBlack();
+
+    // create a labelfor win time
+    labelDrawTime = new cLabel(font);
+    camera->m_frontLayer->addChild(labelDrawTime);
+
+    // set font color
+    labelDrawTime->m_fontColor.setBlack();
 
 
     // create a background
@@ -931,6 +1109,30 @@ int main(int argc, char* argv[])
 
 
     //--------------------------------------------------------------------------
+    // GUI USER INITIALIZATION
+    //--------------------------------------------------------------------------
+
+    QApplication a(argc, argv);
+    globalApplication = &a;
+    MainWindow w;
+    globalMainWindow = &w;
+    w.show();
+    globalApplication->processEvents();
+    globalMainWindow->setGame("paint");
+    globalApplication->processEvents();
+
+    //--------------------------------------------------------------------------
+    // START GUI THREAD
+    //--------------------------------------------------------------------------
+
+    guiThread = new cThread();
+    guiThread->start(runGUI, CTHREAD_PRIORITY_GUI);
+
+    // setup callback when application exits
+    atexit(close);
+
+
+    //--------------------------------------------------------------------------
     // MAIN GRAPHIC LOOP
     //--------------------------------------------------------------------------
 
@@ -942,6 +1144,9 @@ int main(int argc, char* argv[])
 
         // process events
         glfwPollEvents();
+
+        //process GUI events
+        globalApplication->processEvents();
     }
 
     // close window
@@ -1073,8 +1278,70 @@ void onKeyCallback(GLFWwindow* a_window, int a_key, int a_scancode, int a_action
         mirroredDisplay = !mirroredDisplay;
         camera->setMirrorVertical(mirroredDisplay);
     }
-}
 
+    // draw shape 1
+    else if (a_key == GLFW_KEY_1)
+    {
+        drawing1 = true;
+    }
+    // draw shape 2
+    else if (a_key == GLFW_KEY_2)
+    {
+        drawing2 = true;
+    }
+    // draw shape 3
+    else if (a_key == GLFW_KEY_3)
+    {
+        drawing3 = true;
+    }
+    // draw shape 4
+    else if (a_key == GLFW_KEY_4)
+    {
+        drawing4 = true;
+    }
+    // draw shape 5
+    else if (a_key == GLFW_KEY_5)
+    {
+        drawing5 = true;
+    }
+    // draw shape 6
+    else if (a_key == GLFW_KEY_6)
+    {
+        drawing6 = true;
+    }
+
+    // enable server client connection
+    else if (a_key == GLFW_KEY_0)
+    {
+    if (!serverRunning){
+        pid_t pid = fork();
+
+    if (pid == 0) {
+        // Child process
+        std::cout << "Child process: executing client" << std::endl;
+        execl("./client", nullptr);
+
+        // If execl returns, it means an error occurred
+        std::cerr << "Error executing command" << std::endl;
+        exit(1);
+    } else if (pid > 0) {
+        // Parent process
+        std::cout << "Parent process: child running" << std::endl;
+    } else {
+        // Fork failed
+        std::cerr << "Fork failed" << std::endl;
+        exit(1);
+    }
+        cout << "preparing to initialize server on server.cpp"<< endl;     
+        server.initializeServer(PORT);
+        cout << "server initialized on server.cpp"<< endl;
+        cout << "preparing to initialize GUIserver on server.cpp"<< endl;
+        server2.initializeServer(5002);
+        cout << "GUIserver initialized on server.cpp"<< endl;
+        serverRunning = 1;
+    }
+}
+}
 //------------------------------------------------------------------------------
 
 void close(void)
@@ -1098,15 +1365,15 @@ void close(void)
 
 void renderGraphics(void)
 {
-    //1/23/25 modified JML
-    //static int first = 1;
-    //if (first){
+
+/*     static int first = 1;
+    if (first){
     //1/16/25 addition
-    //cout << "preparing to initialize server on server.cpp"<< endl;     
-    //server.initializeServer(PORT);
-    //cout << "server initialized on server.cpp"<< endl;
-    //first=0;
-    //}
+    cout << "preparing to initialize server on server.cpp"<< endl;     
+    server.initializeServer(PORT);
+    cout << "server initialized on server.cpp"<< endl;
+    first=0;
+    } */
 
 
     // sanity check
@@ -1124,6 +1391,12 @@ void renderGraphics(void)
     labelRates->setText(cStr(freqCounterGraphics.getFrequency(), 0) + " Hz / " +
                         cStr(freqCounterHaptics.getFrequency(), 0) + " Hz");
 
+    //update timer data
+    labelTimer->setText("Time elapsed: " + cStr(elapsedTime.count()) + " Seconds");
+
+    //update win time
+    labelDrawTime->setText("Draw Time: " + cStr(drawTime.count()) + " Seconds");
+
     // update position of label
     labelRates->setLocalPos((int)(0.5 * (displayW - labelRates->getWidth())), 15);
 
@@ -1131,7 +1404,13 @@ void renderGraphics(void)
     labelMessage->setLocalPos((int)(0.5 * (displayW - labelMessage->getWidth())), 40);
 
     // update position of label Accuracy
-    labelAccuracy->setLocalPos((int)(0.5 * (displayW - labelAccuracy->getWidth())), (int)(displayH - 40));
+    labelAccuracy->setLocalPos((int)(0.5 * (displayW - labelAccuracy->getWidth())), (int)(displayH - 25));
+
+        //update position of timer label
+    labelTimer->setLocalPos((int)(0.5 * (displayW - labelTimer->getWidth())), displayH - 50);
+
+    //update position of win time label
+    labelDrawTime->setLocalPos((int)(0.5 * (displayW - labelDrawTime->getWidth())), displayH - 75);
 
 
     /////////////////////////////////////////////////////////////////////
@@ -1178,6 +1457,7 @@ void renderHaptics(void)
         cHapticDeviceInfo hapticDeviceInfo = hapticDevice->getSpecifications();  
         //    
 
+
     // main haptic simulation loop
     while(simulationRunning)
     {
@@ -1203,13 +1483,17 @@ void renderHaptics(void)
             tool->setRadius(0.01*((hapticPosition.x()*45+2.1)));
         }
 
+        // calculate time elapsed
+        if (timerStarted)
+        {
+            auto timeEnd = chrono::high_resolution_clock::now();
+            elapsedTime = timeEnd - timeStart;
+        }
+
 
         /////////////////////////////////////////////////////////////////////
         // HAPTIC FORCE COMPUTATION
         /////////////////////////////////////////////////////////////////////
-
-
-
 
 
         // compute global reference frames for each object
@@ -1221,7 +1505,7 @@ void renderHaptics(void)
         //1/23/25 modified JML
         // compute interaction forces
         tool->computeInteractionForces();
-        forces = tool->computeInteractionForces();
+        //forces = tool->computeInteractionForces();
 
         //1/23/25 modified JML
        // server.sendVector(forces);
@@ -1235,7 +1519,8 @@ void renderHaptics(void)
 
         //1/23/25 modified JML "forces = tool....just like computeInteractionForces" 
         // send forces to haptic device
-        forces = tool->applyToDevice();
+        tool->applyToDevice();
+        //forces = tool->applyToDevice();
         forces = -2*forces;
         if( (forces.x() + forces.y() + forces.z() ) >0){};{
 
@@ -1261,6 +1546,7 @@ void renderHaptics(void)
             cCollisionEvent* contact = tool->m_hapticPoint->getCollisionEvent(0);
             if (contact != NULL)
             {
+  
                 // retrieve contact information
                 cVector3d localPos = contact->m_localPos;
                 unsigned int triangleIndex = contact->m_index;
@@ -1344,6 +1630,8 @@ void renderHaptics(void)
                             if ((pixelX >= 0) && (pixelY >= 0) && (pixelX < (int)canvas->m_texture->m_image->getWidth()) && (pixelY < (int)canvas->m_texture->m_image->getHeight()))
                             {
                                 canvas->m_texture->m_image->setPixelColor(pixelX, pixelY, newColor);
+                                mirrorCanvas->m_texture->m_image->setPixelColor(pixelX, pixelY, newColor);
+
                             }
                         }
                     }
@@ -1351,7 +1639,44 @@ void renderHaptics(void)
 
                 // update texture
                 canvas->m_texture->markForUpdate();
+                mirrorCanvas->m_texture->markForUpdate();
+
+                // start timer
+                StartTimer();
             }
+        }
+
+
+        //START SERVER
+        if (mirroringEnabled & (!serverRunning)){
+            pid_t pid = fork();
+
+            if (pid == 0) {
+                // Child process
+                std::cout << "Child process: executing client" << std::endl;
+                execl("./client", nullptr);
+
+
+                // If execl returns, it means an error occurred
+                std::cerr << "Error executing command" << std::endl;
+                exit(1);
+            } else if (pid > 0) {
+                // Parent process
+                std::cout << "Parent process: child running" << std::endl;
+            } else {
+                // Fork failed
+                std::cerr << "Fork failed" << std::endl;
+                exit(1);
+            }
+            cout << "preparing to initialize server on server.cpp"<< endl;
+            server.initializeServer(PORT);
+            cout << "server initialized on server.cpp"<< endl;
+
+            cout << "preparing to initialize GUIserver on server.cpp"<< endl;
+            server2.initializeServer(5002);
+            cout << "GUIserver initialized on server.cpp"<< endl;
+            serverRunning = 1;
+
         }
 
 
@@ -1360,73 +1685,16 @@ void renderHaptics(void)
         // DRAW CIRCLE ((TEST))
         /////////////////////////////////////////////////////////////////////
 
-        /* bool button0;
-        hapticDevice->getUserSwitch(0, button0);
-
-        if (button0)
-        {
-                // paint color at tool position
-                const double K_INK = 30;
-                const double K_SIZE = 10;
-                const int CIRCLE_SIZE = 25;
-                int canvasWidth = (int)canvas->m_texture->m_image->getWidth();
-                int canvasHeight = (int)canvas->m_texture->m_image->getHeight();
-
-                double sizeOuter = 360;
-                double sizeInner = 300;
-                for (int x=0; x<canvasWidth; x++)
-                {
-                    for (int y=0; y<canvasHeight; y++)
-                    {                        
-                        // compute new color percentage
-                        double distance = sqrt((double)(pow(x-(canvasWidth/2),2)+pow(y-(canvasHeight/2),2)));
-                        if (distance <= sizeOuter && distance >= sizeInner)
-                        {
-                            cColorb newColor;
-
-                            // compute new color
-                            GLubyte R = (GLubyte)cClamp((240.0), 130.0, 254.0);
-                            GLubyte G = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                            GLubyte B = (GLubyte)cClamp((20.0), 130.0, 254.0);
-                            newColor.set(R, G, B);
-
-                            // assign new color to pixel
-                            if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
-                            {
-                                canvas->m_texture->m_image->setPixelColor(x, y, newColor);
-                            }
-
-                            
-                        }
-                        else
-                        {
-                           cColorb newColor;
-
-                            // compute new color
-                            GLubyte R = (GLubyte)cClamp((255.0), 130.0, 254.0);
-                            GLubyte G = (GLubyte)cClamp((255.0), 130.0, 254.0);
-                            GLubyte B = (GLubyte)cClamp((255.0), 130.0, 254.0);
-                            newColor.set(R, G, B); 
-
-                            // assign new color to pixel
-                            if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
-                            {
-                                canvas->m_texture->m_image->setPixelColor(x, y, newColor);
-                            }
-                        }
-                    }
-                }
-
-                // update texture
-                canvas->m_texture->markForUpdate();
-        } */
-
        //bool button0;
         //hapticDevice->getUserSwitch(0, button0);
 
-        if (false) {
+        if (drawing1) {
+            globalShape = "circle";
         clearCanvas();
         drawCanvasCircle(500, 500, 250, 25, "blue");
+        StoreColors();
+        drawing1 = false;
+        timerStarted = 0;
         }
 
 
@@ -1442,17 +1710,25 @@ void renderHaptics(void)
         // DRAW ARROW ((TEST))
         /////////////////////////////////////////////////////////////////////
 
-        bool button1;
-        hapticDevice->getUserSwitch(1, button1);
 
-        if (button1)
+        if (drawing2)
         {
+            globalShape = "arrowAndCircle";
             clearCanvas();
             drawCanvasLine(500, 500, 900, 900, 25, "red");
             drawCanvasLine(500, 500, 500, 700, 25, "yellow");
             drawCanvasLine(500, 500, 700, 500, 25, "green");
             drawCanvasCircle(250, 250, 175, 25, "blue");
             StoreColors();
+            drawing2 = false;
+            timerStarted = 0;
+            //7-10-25 follow up comment JML from 7-9-25
+            //mirroring test by reflecting 'canvas' 180 degrees. successful test
+            //canvas->rotateAboutGlobalAxisRad(cVector3d(0,0,1), cDegToRad(180)); //originally cDegtoRad(90)
+            //canvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(0)); //originally cDegtoRad(90)            
+            //canvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(0)); //originally cDegtoRad(90)            
+            
+
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
@@ -1464,16 +1740,17 @@ void renderHaptics(void)
         // DRAW TRIANGLE ((TEST))
         /////////////////////////////////////////////////////////////////////
 
-        bool button2;
-        hapticDevice->getUserSwitch(2, button2);
 
-        if (button2)
+        if (drawing3)
         {
+            globalShape = "triangle";
             clearCanvas();
             drawCanvasLine(200, 200, 500, 800, 25, "red");
             drawCanvasLine(500, 800, 800, 200, 25, "red");
             drawCanvasLine(800, 200, 200, 200, 25, "green");
             StoreColors();
+            drawing3 = false;
+            timerStarted = 0;
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
@@ -1484,45 +1761,76 @@ void renderHaptics(void)
         // DRAW SQUARE ((TEST))
         /////////////////////////////////////////////////////////////////////
 
-        bool button3;
-        hapticDevice->getUserSwitch(3, button3);
 
-        if (button3)
+        if (drawing4)
         {
+            globalShape = "square";
             clearCanvas();
             drawCanvasLine(200, 200, 200, 800, 25, "red");
             drawCanvasLine(200, 800, 800, 800, 25, "yellow");
             drawCanvasLine(800, 800, 800, 200, 25, "green");
             drawCanvasLine(800, 200, 200, 200, 25, "blue");
             StoreColors();
+            drawing4 = false;
+            timerStarted = 0;
         }
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
         ///////////////////////////////////////////////////////
 
-        bool button0;
-        hapticDevice->getUserSwitch(0, button0);
-
-        if (button0){
-            GradeAccuracy();
-            cout << "accuracy: " << accuracy << "%" << endl;
+        if (mirrorCanvasToggle)
+        {
+       
+            //7-10-25 follow up comment JML from 7-9-25
+            //mirroring test by reflecting 'canvas' 180 degrees. successful test
+            //canvas->rotateAboutGlobalAxisRad(cVector3d(0,0,1), cDegToRad(180)); //originally cDegtoRad(90)
+            //canvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(0)); //originally cDegtoRad(90)            
+            //canvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(0)); //originally cDegtoRad(90)            
+            
+            if (mirrorCanvasVisible==1){
+            mirrorCanvas->setShowEnabled(false);
+            mirrorCanvasVisible=0;
+            }else{
+            mirrorCanvas->setShowEnabled(true);
+            mirrorCanvasVisible=1;
+            }
+            mirrorCanvasToggle = false; 
         }
-
+    
 
 
         /////////////////////////////////////////////////////////////////////
         // Grade Accuracy ((TEST))
         /////////////////////////////////////////////////////////////////////
 
+        bool button0;
+        hapticDevice->getUserSwitch(0, button0);
 
+        if (button0 && (button0 != b0PreviousState)){
+            cout << "entering GradeAccuracy" << endl;
+            GradeAccuracy();
+            cout << "exiting GradAccuracy" << endl;
+            //cout << "accuracy: " << accuracy << "%" << endl;
+            b0PreviousState = button0;
+        }
+
+        if (!button0 && (button0 != b0PreviousState)) {b0PreviousState = button0;}
 
 
 
         ///////////////////////////////////////////////////////
         // END OF TEST AREA
         ///////////////////////////////////////////////////////
+        cVector3d position;
+        hapticDevice->getPosition(position);
 
-
+        //std::cout << "preparing to sendVector"<< std::endl;   
+        if (serverRunning)
+        {
+            server.sendVector(position);
+            server2.sendVector(guiServerValues);
+        }       
+        //std::cout << "sendVector complete"<< std::endl;  
 
         // signal frequency counter
         freqCounterHaptics.signal(1);
@@ -1532,3 +1840,56 @@ void renderHaptics(void)
     simulationFinished = true;
 }
 //------------------------------------------------------------------------------
+
+void runGUI(void) {
+    //process GUI values
+    // Wait for GUI input
+    while (!guiDataCollected)
+    {
+        if (globalMainWindow->returnFillInfoButtonClicked() || globalMainWindow->returnSaveInfoButtonClicked())
+        {
+            userID = globalMainWindow->returnUserId();
+            leftHanded = globalMainWindow->returnLeftHanded();
+            rightHanded = globalMainWindow->returnRightHanded();
+            strokedLeftArm = globalMainWindow->returnStrokedLeftArm();
+            strokedRightArm = globalMainWindow->returnStrokedRightArm();
+            strokedBothArm = globalMainWindow->returnStrokedBothArm();
+            mirroringStrength = globalMainWindow->returnMirroringStrength();
+            gloveIntensity = globalMainWindow->returnGloveIntensity();
+            gloveDeadzone = globalMainWindow->returnGloveDeadzone();
+            mirroringEnabled = globalMainWindow->returnMirroringEnabled();
+            gameAttemptsFolder = globalMainWindow->returnGameAttemptsFolder();
+            guiDataCollected = true;
+        }
+    } //end while loop
+    while (simulationRunning)
+    {
+        mirroringStrength = globalMainWindow->returnMirroringStrength();
+        gloveIntensity = globalMainWindow->returnGloveIntensity();
+        gloveDeadzone = globalMainWindow->returnGloveDeadzone();
+        guiServerValues.set(mirroringStrength, 0, 0);
+        mirroringEnabled = globalMainWindow->returnMirroringEnabled();
+        string shape = globalMainWindow->returnShapeToDraw();
+        globalMainWindow->resetShapeToDraw();
+        cout << shape << endl;
+        if (shape == "drawing1") {
+            drawing1 = true;
+        }
+        else if (shape == "drawing2") {
+            drawing2 = true;
+        }
+        else if (shape == "drawing3") {
+            drawing3 = true;
+        }
+        else if (shape == "drawing4") {
+            drawing4 = true;
+        }
+        //7-10-25 JML: hijacking the shape system to mirror the canvas
+        else if (shape == "drawingMirror") {
+            mirrorCanvasToggle=true;
+        }
+        //send time elapsed
+        globalMainWindow->getTimeElapsed(elapsedTime.count());
+
+    } //end while loop
+}

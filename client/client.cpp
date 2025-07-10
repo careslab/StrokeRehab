@@ -23,6 +23,10 @@ int Kp;
 //SocketClientServer client;
 chai3d::SocketClientServer client;
 cVector3d receivedForceVector (0,0,0);
+
+//GUI Client
+chai3d::SocketClientServer client2;
+cVector3d receivedForceVector2 (0,0,0);
     
 // a pointer to the current haptic device
 cGenericHapticDevicePtr hapticDevice;
@@ -51,6 +55,14 @@ int main(int argc, char* argv[]) {
         cerr << "Failed to connect to server" << endl;
      
     }
+     //sleep to let server 2 initialize
+     sleep(1);
+
+     // Initialize the client to connect to the server2
+     if (!client2.initializeClient("127.0.0.1", 5002)) {
+         cerr << "Failed to connect to server2" << endl;
+
+     }
     
     //client.acceptConnection();
     //initiialize device to 0 mark
@@ -61,7 +73,7 @@ int main(int argc, char* argv[]) {
     
     // retrieve the highest stiffness this device can render
     double hapticDeviceMaxStiffness = hapticDeviceInfo.m_maxLinearStiffness;
-    const double HAPTIC_STIFFNESS   = 2500.0; //2500 good middleground
+    double HAPTIC_STIFFNESS   = 2500.0; //2500 good middleground
 
     while(true){
     
@@ -69,44 +81,25 @@ int main(int argc, char* argv[]) {
             cerr << "Failed to receive vector from server" << endl;
             return -1;
         }
+
+        if (!client2.receiveVector(receivedForceVector2)) {
+            cerr << "Failed to receive vector from server2" << endl;
+            return -1;
+        }
         // Output the received vector data
         //cout << "Connected: " <<receivedForceVector << endl;
         //cout << "x = " << receivedForceVector.x << ", y = " << receivedForceVector.y << ", z = " << receivedForceVector.z << endl;
-
-            // compute linear force
-            //kp reference chart for 01-mydevice
-            // -200: was too sharp
-            // -1: weak but smooth
-            //  -50: acceptable 
-            //kp reference chart for 09-magnets
-            //-50 was FAR too strong
-            //-20 was a bit too much
-            //-1 was too weak            
-
-
-
-            //double Kp = -100; // [N/m] //depreciated in favor of ARGc ARGV
-        //remember negative for orientation
-
-        //compute average derivative of elems
-        //double D = 0.0;
-        //for(int n = 0; n <= 98; n++) {
-            //double a = elems[n];
-            //double b = elems[n+1];
-            //D = D + (b-a)/(0.001);
-        //}
-        //D = D/100;
-
-        //compute integral over elems
-        //double I = 0.0;
-        //for(int n = 0; n <= 99; n++) {
-            //double a = elems[n];
-            //I = I + a*0.001;
-        //}
+        //haptic stiffness is x component of received vector 2
+        HAPTIC_STIFFNESS = receivedForceVector2.x();
 
         cVector3d position;
             hapticDevice->getPosition(position);
-            cVector3d dirHaptic = receivedForceVector - position;
+            cVector3d mirrorReceivedForceVector (receivedForceVector.x(), -receivedForceVector.y(), receivedForceVector.z());
+
+            std::cout<<mirrorReceivedForceVector;
+            std::cout << "\n " << std:: endl; 
+
+            cVector3d dirHaptic = mirrorReceivedForceVector - position;
             //cVector3d forceHaptic = 0.7*(HAPTIC_STIFFNESS * dirHaptic) + 4*(HAPTIC_STIFFNESS * D * dirHaptic) + 6*(HAPTIC_STIFFNESS * I * dirHaptic);
             cVector3d forceHaptic = (HAPTIC_STIFFNESS * dirHaptic);
 

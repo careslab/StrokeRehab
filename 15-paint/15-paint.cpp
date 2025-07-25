@@ -41,6 +41,11 @@
 */
 //==============================================================================
 
+//STROKESREHABLAB NOTES 7-25-25 JML
+//This project 
+
+//
+
 //------------------------------------------------------------------------------
 #include "chai3d.h"
 #include <chrono>
@@ -56,6 +61,14 @@ using namespace std;
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/wait.h>
+
+
+//arduino includes 2/14; 3/21; 7/23 JML
+#include <fstream>
+#include <string>
+
+#define SERIAL_PORT "/dev/ttyACM0"
+//arduino includes 2/14; 3/21; 7/23 JML
 
 #include <QApplication>
 #include "mainwindow.h"
@@ -111,6 +124,7 @@ cMesh* palette;
 // a mesh object to model a piece of canvas
 cMesh* canvas;
 cMesh* mirrorCanvas; //mirrorCanvas added 7-9-25 JML
+cMesh* feedbackCanvas; //feedbakCanvas added 7-25-25 JML; fully blank with no patterns or haptic mesh
 
 int mirrorCanvasVisible = 0; //mirrorCanvas vibility toggle added 7-10-25
 
@@ -192,6 +206,8 @@ int drawnBlue[1024][1024];
 //accuracy variable
 double accuracy;
 
+double deadZone = 0.16; //7/23 JMl addition arduino
+
 //what shape is being drawn?
 string globalShape;
 
@@ -211,7 +227,9 @@ bool drawing3 = false;
 bool drawing4 = false;
 bool drawing5 = false;
 bool drawing6 = false;
-bool mirrorCanvasToggle = false;
+bool mirrorCanvasToggle = false; //7-25-25 hijack for 3 way toggles jml
+bool feedbackCanvasToggle = false;
+bool canvasToggle = false;
 
 // variable to hold button 0 state for edge driven activation
 bool b0PreviousState = false;
@@ -351,6 +369,8 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size, str
             if (y >= std::min(y1, y2) && y <= std::max(y1, y2)) {
                 // Color the pixel
                 canvas->m_texture->m_image->setPixelColor(x, y, newColor);
+                mirrorCanvas->m_texture->m_image->setPixelColor(x, y, newColor);
+
             }
         }
         }
@@ -364,6 +384,8 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size, str
             if (x >= std::min(x1, x2) && x <= std::max(x1, x2)) {
                 // Color the pixel
                 canvas->m_texture->m_image->setPixelColor(x, y, newColor);
+                mirrorCanvas->m_texture->m_image->setPixelColor(x, y, newColor);
+
             }
         }
         }
@@ -389,6 +411,8 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size, str
                     // Assign new color to pixel
                     if ((x >= 0) && (y >= 0) && (x < canvasWidth) && (y < canvasHeight)) {
                         canvas->m_texture->m_image->setPixelColor(x, y, newColor);
+                        mirrorCanvas->m_texture->m_image->setPixelColor(x, y, newColor);
+
                     }
                 }
             }
@@ -410,6 +434,8 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size, str
                 // Assign new color to pixel
                 if ((x >= 0) && (y >= 0) && (x < canvasWidth) && (y < canvasHeight)) {
                     canvas->m_texture->m_image->setPixelColor(x, y, newColor);
+                    mirrorCanvas->m_texture->m_image->setPixelColor(x, y, newColor);
+
                 }
             }
     }
@@ -417,6 +443,8 @@ void drawCanvasLine(double x1, double y1, double x2, double y2, double size, str
 
     // Update the texture
     canvas->m_texture->markForUpdate();
+    feedbackCanvas->m_texture->markForUpdate(); //7-25-25JML feedbackCanvas only needs to be blanked out to remove texture
+    mirrorCanvas->m_texture->markForUpdate(); 
 }
 
 // This function will draw a circle of diameter r centered at x,y
@@ -445,8 +473,8 @@ void drawCanvasCircle(double x1, double y1, double r, double width, string incol
                             if ((x >= 0) && (y >= 0) && (x < (int)canvas->m_texture->m_image->getWidth()) && (y < (int)canvas->m_texture->m_image->getHeight()))
                             {
                                 canvas->m_texture->m_image->setPixelColor(x, y, newColor);
+                                mirrorCanvas->m_texture->m_image->setPixelColor(x, y, newColor);                                
                             }
-
                             
                         }
                     }
@@ -454,6 +482,8 @@ void drawCanvasCircle(double x1, double y1, double r, double width, string incol
 
                 // update texture
                 canvas->m_texture->markForUpdate();
+                mirrorCanvas->m_texture->markForUpdate();
+
 }
 
 //function to store each pixel's color values into an array
@@ -911,7 +941,7 @@ int main(int argc, char* argv[])
     //IF this all works
 
     // set the position of the object
-    canvas->setLocalPos(-0.25, 0.15, 0.0); //-0.25, 0.3, 0.0 original
+    canvas->setLocalPos(-0.25, 0.15, 0.0); //-0.25, 0.3, 0.0 original,
     canvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(90)); //originally cDegtoRad(90)
     canvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(90)); //originally cDegtoRad(90)
 
@@ -959,6 +989,69 @@ int main(int argc, char* argv[])
     brushgreen.set((GLubyte)30, (GLubyte)154, (GLubyte)49);
     //clearCanvas(); //7-10-25 JML as mirrorCanvas (declared below) uses the same clearCanvas command
     //this has been commented out and called in mirrorCanvas' creation
+    //NOTE feedbackCanvas is inserted before Mirror Canvas due to convenience despite later temporal addition 7-25-25 JML
+
+
+    /////////////////////////////////////////////////////////////////////////
+    // feedbackCanvas:
+    //NOTE feedbackCanvas is inserted before Mirror Canvas due to convenience despite later temporal addition 7-25-25 JML
+    //no haptic, no functions, just purely blank
+    /////////////////////////////////////////////////////////////////////////
+
+    // create a mesh
+    feedbackCanvas = new cMesh();
+
+    // create a plane
+    cCreatePlane(feedbackCanvas, 0.8, 0.8); //0.5, 0.5 original
+
+    // add object to world
+    world->addChild(feedbackCanvas);
+
+    // set the position of the object
+    feedbackCanvas->setLocalPos(-0.25, 0.15, 0.0); //-0.25, 0.3, 0.0 original
+    feedbackCanvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(90)); //originally cDegtoRad(90)
+    feedbackCanvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(90)); //originally cDegtoRad(90)
+
+    // create texture map
+    feedbackCanvas->m_texture = cTexture2d::create();
+
+    // load texture image
+    fileload = feedbackCanvas->m_texture->loadFromFile(currentpath + "../resources/images/canvas.jpg");
+    if (!fileload)
+    {
+        cout << "Error - Texture image failed to load correctly." << endl;
+        close();
+        return (-1);
+    }
+    canvasOriginal = feedbackCanvas->m_texture->m_image->copy();
+
+    // we disable lighting properties for canvas
+    feedbackCanvas->setUseMaterial(false);
+
+    // enable texture mapping
+    feedbackCanvas->setUseTexture(true);
+
+    // create normal map from texture data
+    cNormalMapPtr feedbackNormalMap = cNormalMap::create();
+    feedbackNormalMap->createMap(feedbackCanvas->m_texture);
+    feedbackCanvas->m_normalMap = feedbackNormalMap;
+
+    //set colors
+    blue.set((GLubyte)130, (GLubyte)130, (GLubyte)254);
+    red.set((GLubyte)254, (GLubyte)130, (GLubyte)130);
+    yellow.set((GLubyte)254, (GLubyte)254, (GLubyte)156);
+    green.set((GLubyte)130, (GLubyte)254, (GLubyte)149);
+    brushblue.set((GLubyte)30, (GLubyte)30, (GLubyte)254);
+    brushred.set((GLubyte)254, (GLubyte)30, (GLubyte)30);
+    brushyellow.set((GLubyte)234, (GLubyte)254, (GLubyte)56);
+    brushgreen.set((GLubyte)30, (GLubyte)154, (GLubyte)49);
+    //clearCanvas(); //called in clearCanvas in MirrorCanvas creation; the canvas needs to be blanked to ensure consistency else intial
+    //bootup texture will look different, ruining illusion
+    feedbackCanvas->rotateAboutGlobalAxisRad(cVector3d(0,0,1), cDegToRad(180)); //originally cDegtoRad(90)
+    feedbackCanvas->rotateAboutGlobalAxisRad(cVector3d(0,1,0), cDegToRad(0)); //originally cDegtoRad(90)            
+    feedbackCanvas->rotateAboutGlobalAxisRad(cVector3d(1,0,0), cDegToRad(0)); //originally cDegtoRad(90)            
+     
+    feedbackCanvas->setShowEnabled(false);
 
 
     /////////////////////////////////////////////////////////////////////////
@@ -1335,6 +1428,13 @@ void onKeyCallback(GLFWwindow* a_window, int a_key, int a_scancode, int a_action
         cout << "preparing to initialize server on server.cpp"<< endl;     
         server.initializeServer(PORT);
         cout << "server initialized on server.cpp"<< endl;
+
+        cout << "preparing to initialize arduino"<< endl; 
+        server.initializeArduino(SERIAL_PORT); // JML 2/26 arduino falconClientServer function
+
+        std::cout<<"post initialize server and arduino" << std::endl;
+       // server.initializeServerAndSerial(PORT, SERIAL_PORT); //JML 2/26 arduino merged function
+
         cout << "preparing to initialize GUIserver on server.cpp"<< endl;
         server2.initializeServer(5002);
         cout << "GUIserver initialized on server.cpp"<< endl;
@@ -1672,6 +1772,11 @@ void renderHaptics(void)
             server.initializeServer(PORT);
             cout << "server initialized on server.cpp"<< endl;
 
+            cout << "preparing to initialize arduino"<< endl; 
+            server.initializeArduino(SERIAL_PORT); // JML 2/26 arduino falconClientServer function
+
+            std::cout<<"post initialize server and arduino" << std::endl;
+
             cout << "preparing to initialize GUIserver on server.cpp"<< endl;
             server2.initializeServer(5002);
             cout << "GUIserver initialized on server.cpp"<< endl;
@@ -1796,9 +1901,12 @@ void renderHaptics(void)
             }
             mirrorCanvasToggle = false; 
         }
+
+        //7-25-25JML insert updated canvas select system
+        //GUI has 3 buttons; set resepctive XCanvasToggle = 1 and all others =0
+        //in 15-paint code, 3 if statements (100,010,001) then display respective Canvas, then 
+        //set all xCanvasToggle = 0; 
     
-
-
         /////////////////////////////////////////////////////////////////////
         // Grade Accuracy ((TEST))
         /////////////////////////////////////////////////////////////////////
@@ -1828,6 +1936,8 @@ void renderHaptics(void)
         if (serverRunning)
         {
             server.sendVector(position);
+            server.MovementActivateBuzzer(linearVelocity, button0, deadZone); //3-19-25 JML new addition 7/23 arduino           
+           
             server2.sendVector(guiServerValues);
         }       
         //std::cout << "sendVector complete"<< std::endl;  
@@ -1888,6 +1998,16 @@ void runGUI(void) {
         else if (shape == "drawingMirror") {
             mirrorCanvasToggle=true;
         }
+        //7-25-25 JML: 2nd hijack to enable feedback and canvas toggle
+        else if (shape == "drawingFeedback") {
+            feedbackCanvasToggle=true;
+        }
+        else if (shape == "drawingCanvas") {
+            canvasToggle=true;
+        }               
+        else if (shape == "clearCanvas") {
+               clearCanvas();
+        }        
         //send time elapsed
         globalMainWindow->getTimeElapsed(elapsedTime.count());
 

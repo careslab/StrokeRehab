@@ -325,8 +325,18 @@ void MainWindow::on_mirrorCanvasToggle_clicked()
     //mirrorCanvasToggle = true;
     shapeToDraw ="drawingMirror";
 }
-
-
+//7-10-25 JML mirrorCanvas toggling experiment
+void MainWindow::on_feedbackCanvasToggle_clicked()
+{
+    //mirrorCanvasToggle = true;
+    shapeToDraw ="drawingFeedback";
+}
+//7-10-25 JML mirrorCanvas toggling experiment
+void MainWindow::on_canvasToggle_clicked()
+{
+    //mirrorCanvasToggle = true;
+    shapeToDraw ="drawingCanvas";
+}
 
 void MainWindow::on_SetMirroringStrength_clicked()
 {
@@ -361,5 +371,10 @@ void MainWindow::on_DrawShape3_clicked()
 void MainWindow::on_DrawShape4_clicked()
 {
     shapeToDraw = "drawing4";
+}
+
+void MainWindow::on_ClearCanvas_clicked()
+{
+    shapeToDraw = "clearCanvas";
 }
 

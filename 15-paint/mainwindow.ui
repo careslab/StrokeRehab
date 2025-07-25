@@ -32,7 +32,7 @@
      <string>Magnets Game</string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignCenter</set>
+     <set>Qt::AlignmentFlag::AlignCenter</set>
     </property>
    </widget>
    <widget class="QLabel" name="LabelUserId">
@@ -222,7 +222,7 @@
      <string>Mirroring Strength: </string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
     </property>
    </widget>
    <widget class="QLineEdit" name="MirroringStrength">
@@ -277,7 +277,7 @@
      <string>Glove Intensity: </string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
     </property>
    </widget>
    <widget class="QSlider" name="GloveIntensitySlider">
@@ -302,10 +302,10 @@
      <number>2</number>
     </property>
     <property name="orientation">
-     <enum>Qt::Horizontal</enum>
+     <enum>Qt::Orientation::Horizontal</enum>
     </property>
     <property name="tickPosition">
-     <enum>QSlider::TicksBelow</enum>
+     <enum>QSlider::TickPosition::TicksBelow</enum>
     </property>
     <property name="tickInterval">
      <number>2</number>
@@ -324,7 +324,7 @@
      <string>Value</string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignCenter</set>
+     <set>Qt::AlignmentFlag::AlignCenter</set>
     </property>
    </widget>
    <widget class="QLabel" name="LabelGloveDeadzone">
@@ -340,7 +340,7 @@
      <string>Glove Deadzone:</string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
     </property>
    </widget>
    <widget class="QLineEdit" name="GloveDeadzone">
@@ -384,7 +384,7 @@
      <string>(No more than 3000)</string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignCenter</set>
+     <set>Qt::AlignmentFlag::AlignCenter</set>
     </property>
    </widget>
    <widget class="QPushButton" name="DrawShape1">
@@ -458,7 +458,7 @@ And Circle</string>
      <string>Choose a shape to draw</string>
     </property>
     <property name="alignment">
-     <set>Qt::AlignCenter</set>
+     <set>Qt::AlignmentFlag::AlignCenter</set>
     </property>
    </widget>
    <widget class="QPushButton" name="ClearCanvas">
@@ -477,14 +477,40 @@ And Circle</string>
    <widget class="QPushButton" name="mirrorCanvasToggle">
     <property name="geometry">
      <rect>
-      <x>200</x>
-      <y>520</y>
-      <width>151</width>
+      <x>210</x>
+      <y>490</y>
+      <width>181</width>
       <height>25</height>
      </rect>
     </property>
     <property name="text">
      <string>Mirror Canvas Toggle</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="feedbackCanvasToggle">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>490</y>
+      <width>181</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>feedbackCanvasToggle</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="canvasToggle">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>520</y>
+      <width>181</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>canvasToggle</string>
     </property>
    </widget>
   </widget>

@@ -58,7 +58,10 @@ private slots:
 
     void on_EnableMirroring_clicked();
 
+    //7-25-25 JML toggle system update for 3-way ifs
     void on_mirrorCanvasToggle_clicked();
+    void on_feedbackCanvasToggle_clicked();
+    void on_canvasToggle_clicked();
 
     void on_SetMirroringStrength_clicked();
 
@@ -72,6 +75,7 @@ private slots:
 
     void on_DrawShape4_clicked();
 
+    void on_ClearCanvas_clicked();
 private:
     Ui::MainWindow *ui;
     bool fillInfoButtonClicked = false;
@@ -85,7 +89,9 @@ private:
     int gloveIntensity = 50;
     double gloveDeadzone = 0.005; //arbitrary values
     bool mirroringEnabled = false;
-    bool mirrorCanvasToggle = false;
+    bool mirrorCanvasToggle = false; //7-25-25 hijack for 3 way toggles jml
+    bool feedbackCanvasToggle = false;
+    bool canvasToggle = false;
     double timeElapsed = 0.0;
 
 
